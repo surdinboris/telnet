@@ -5,15 +5,15 @@ import io
 class Apconfg():
     def __init__(self):
         if __name__ == "__main__":
-            buff = io.BytesIO(b'')
-            ser = serial.Serial('COM4',
+            self.buff = io.BytesIO(b'')
+            self.ser = serial.Serial('COM4',
                                      timeout=3,
                                      baudrate=9600,
                                      xonxoff=0,
                                      stopbits=1,
                                      parity=serial.PARITY_NONE,
                                      bytesize=8)
-            command('lcdBlink id#:1 1')
+            self.command('olReboot all')
 
   #sio = io.TextIOWrapper(ser,  newline='\r')
 
@@ -21,15 +21,14 @@ class Apconfg():
         if (self.ser.inWaiting() > 0):
             # if incoming bytes are waiting to be read from the serial input buffer
             self.buff.write(self.ser.read(self.ser.inWaiting()))
-            print(self.buff.getvalue().decode('ascii'))
-            return self.buff.getvalue().decode('ascii')
             # read the bytes and convert from binary array to ASCII
-            #print(data_str, end='')
+            self.data_str = self.ser.read(self.ser.inWaiting()).decode('ascii')
+            print('data',self.data_str, end='')
 
     def sendcom(self,cmd=b''):
-        print(self.ser)
         self.ser.write(cmd)
         self.ser.write(bytes("\r", encoding='ascii'))
+        self.inwait()
 
 
     def login(self):
@@ -42,11 +41,11 @@ class Apconfg():
         self.ser.read_until(b"apc>")
         self.inwait()
 
-    def command(self,cmd='lcdBlink id#:1 1'):
+    def command(self,cmd='tcpip'):
         print('Opening com interface...')
         self.login()
         self.sendcom(cmd.encode())
         self.sendcom(b'exit')
-        return self.buff.getvalue().decode('ascii')
+        self.inwait()
 
 app=Apconfg()
