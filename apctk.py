@@ -9,15 +9,15 @@ class Apconfg():
         if __name__ == "__main__":
             self.comm=b''
             self.buff = io.BytesIO(b'')
-            self.ser = serial.Serial('COM4',
+            self.ser = serial.Serial('COM1',
                                      timeout=3,
                                      baudrate=9600,
                                      xonxoff=0,
                                      stopbits=1,
                                      parity=serial.PARITY_NONE,
                                      bytesize=8)
-    def inwait(self):
 
+    def inwait(self):
         if (self.ser.inWaiting() > 0):
             time.sleep(1)
             # if incoming bytes are waiting to be read from the serial input buffer
@@ -26,11 +26,15 @@ class Apconfg():
             # read the bytes and convert from binary array to ASCII
 
             print(self.data_str, end='')
+    def conn_init(self):
+        for x in range(2):
+            self.ser.write(bytes("\r", encoding='ascii'))
 
     def sendcom(self,cmd=b''):
         self.ser.write(cmd)
+
         self.ser.write(bytes("\r", encoding='ascii'))
-        time.sleep(1)
+        time.sleep(2)
         if debug == True:
             self.inwait()
 
@@ -38,15 +42,16 @@ class Apconfg():
         self.promt=self.ser.readlines()
         while len(self.promt) == 0: # activating new session
             print('Trying to initialize serial connection...')
-            self.sendcom()
+            self.conn_init()
             self.promt=self.ser.readlines()
+            print(self.promt)
 
             #print('modified',self.promt)
 
         if self.promt[-1] == b'User Name : ':
             print('logging in...')
             self.sendcom(b'apc')
-            self.ser.read_until(b'Password')
+            self.ser.read_until(b'Password : ')
             self.sendcom(b'apc')
             self.ser.read_until(b'apc>')
             return True
@@ -79,7 +84,7 @@ app=Apconfg()
 app.command('olReboot all')
 getver=app.getver()
 
-if getver == b'5.1.4\r\n':
+if getver == b'5.1.4\r\n' or b'6.1.3\r\n':
     print('ver 5.1.4')
     app.command("tcpip -S enable -i 192.168.0.122 -s 255.255.255.0 -g 0.0.0.0 -h pdu-1")
     app.command("reboot")
