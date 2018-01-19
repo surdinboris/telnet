@@ -1,7 +1,8 @@
 import serial
 import time
 import io
-import sys
+import tkinter
+from tkinter import ttk
 
 debug = False
 class Apconfg():
