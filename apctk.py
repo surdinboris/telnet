@@ -97,7 +97,7 @@ class ApcGui():
     def __init__(self):
         self.run = True
         self._root = Tk()
-        self._root.title('APC ledtest congig\control tool')
+        self._root.title('LED test config\control tool')
         self.app = Apconfg()
         self._mainframe = tk.Frame(self._root)
         self._mainframe.grid(row=0, column=0, sticky=(E, W, N, S))
@@ -118,16 +118,24 @@ class ApcGui():
     def pduconf(self,pdunum):
             self.butts = [self._pdu1conf_btn, self._pdu2conf_btn, self._pdu3conf_btn, self._pdu4conf_btn]
             for butt in self.butts:
-                butt.config(state='disabled',command=lambda: self.ignore())
+                butt.config(state='disabled')
+            self.pduconfbu=self.pduconf
+            self.pduconf=self.ignore
             self._root.update()
             self.app.command("tcpip -S enable -i 9.151.140.15{} -s 255.255.255.0 -g 0.0.0.0 -h pdu-{}".format(pdunum,pdunum))
             self.app.command("reboot")
             self.app.command("YES")
-            for num,butt in enumerate(self.butts):
+            for butt in self.butts:
                 butt.config(state='active')
+            self._root.after(2000, self.bindit)
 
-    def ignore(self):
-        print("ignore")
+    def bindit(self):
+        for butt in self.butts:
+            butt.config(state='active')
+        self.pduconf=self.pduconfbu
+
+    def ignore(self,*args,**kwargs):
+
         return "break"
 
 
