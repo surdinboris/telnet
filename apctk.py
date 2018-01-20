@@ -2,6 +2,7 @@ import serial
 import time
 import io
 import tkinter as tk
+import tkinter.scrolledtext as tkst
 from tkinter import *
 from tkinter import ttk,messagebox
 
@@ -85,13 +86,22 @@ class ApcGui():
         self.run = True
         self._root = Tk()
         self._root.title('LED test config\control tool')
-
+        #main window
         self._mainframe = tk.Frame(self._root)
         self._mainframe.grid(row=0, column=0, sticky=(E, W, N, S))
+        #output part
+        self._textboxframe=tk.LabelFrame(self._mainframe, text='Output')
+        self._textboxframe.grid(row=0, column=1, sticky=(W,N))
+        self._textboxframe.columnconfigure(0, weight=1)
+        self._textboxframe.rowconfigure(0, weight=1)
+        self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=45, height=10, state='disabled')
+        self._texbox.grid(row=0, column=0, sticky=W, padx=5)
+        #config part
         self._configframe=tk.LabelFrame(self._mainframe, text='Config')
-        self._configframe.grid(row=0, column=0, sticky=(W,S))
+        self._configframe.grid(row=0, column=0, sticky=(W,N))
         self._configframe.columnconfigure(0, weight=1)
         self._configframe.rowconfigure(0, weight=1)
+        #config buttons
         self._pdu1conf_btn=tk.Button(self._configframe,text='PDU-1', command=lambda: self.pduconf(1))
         self._pdu1conf_btn.grid(row=0, column=1, sticky=W, padx=5)
         self._pdu2conf_btn=tk.Button(self._configframe,text='PDU-2', command=lambda: self.pduconf(2))
@@ -100,7 +110,6 @@ class ApcGui():
         self._pdu3conf_btn.grid(row=1, column=1, sticky=W, padx=5)
         self._pdu4conf_btn=tk.Button(self._configframe,text='PDU-4', command=lambda: self.pduconf(4))
         self._pdu4conf_btn.grid(row=1, column=2, sticky=W, padx=5)
-
         self._root.mainloop()
 
 
@@ -108,13 +117,16 @@ class ApcGui():
             self.butts = [self._pdu1conf_btn, self._pdu2conf_btn, self._pdu3conf_btn, self._pdu4conf_btn]
             for butt in self.butts:
                 butt.config(state='disabled')
+            self.print_to_gui('PDU-{} config started\n'.format(pdunum))
             self.pduconfbu=self.pduconf
             self.pduconf=self.ignore
             self._root.update()
             command("tcpip -S enable -i 9.151.140.15{} -s 255.255.255.0 -g 0.0.0.0 -h pdu-{}".format(pdunum,pdunum), 'config')
+
             for butt in self.butts:
                 butt.config(state='active')
             self._root.after(2000, self.bindit)
+
 
     def bindit(self):
         for butt in self.butts:
@@ -122,9 +134,11 @@ class ApcGui():
         self.pduconf=self.pduconfbu
 
     def ignore(self,*args,**kwargs):
+        return 'break'
 
-        return "break"
-
-
-
+    def print_to_gui(self, txtstr):
+        self._texbox.config(state="normal")
+        self._texbox.insert('end', txtstr)
+        self._texbox.config(state="disabled")
+        self._root.update()
 gui=ApcGui()
