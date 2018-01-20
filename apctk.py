@@ -1,12 +1,11 @@
 import serial
 import time
-import io
+import telnetlib
 import tkinter as tk
 import tkinter.scrolledtext as tkst
 from tkinter import *
-from tkinter import ttk,messagebox
 
-debug = False
+######Serial part##############
 
 def crconn():
     ser = serial.Serial(
@@ -51,7 +50,7 @@ def conn_init(ser): #initiation procedure for console - need to send enter two  
         ser.write(bytes("\r", encoding='ascii'))
 
 def command(comm,type):
-    print('Got command %s of type'% comm, type)
+    print('Got command {} of type {}'.format(comm, type))
     ser=crconn()
     if type == 'config':
         handler(ser,[comm,'reboot','YES'])
@@ -62,6 +61,12 @@ def command(comm,type):
     print('Closing session.')
     ser.close()
     return True
+
+def print_to_gui(txtstr):
+    gui._texbox.config(state="normal")
+    gui._texbox.insert('end', txtstr)
+    gui._texbox.config(state="disabled")
+    gui._root.update()
 
 def getver(): #returns aos version
     ser=crconn()
@@ -77,15 +82,62 @@ def getver(): #returns aos version
 #command("olReboot all", 'action')
 # command("tcpip -S enable -i 192.168.0.159 -s 255.255.255.0 -g 0.0.0.0 -h pdu-7", 'config')
 
+######Telnet part##############
+def texecute(systype, host):  # patterns generation & execution
+    tel = login(host)
+    # usage  texecute('f2_3ph', 1), 'f4_3ph'
+
+    if systype == 'f2_3ph':
+        cmdlist = []
+        for num in range(13, 17):
+            onoff = 'OFF '
+            outlname = 'Master_'
+            cmdlist.append(''.join([onoff, outlname, str(num)]))
+        print(cmdlist)
+        commtel(tel,cmdlist)
+        # print(''.join([onoff,outlname,str(num)]))
+    if systype == 'f4_3ph':
+        cmdlist = []
+        for num in range(13, 17):
+            onoff = 'OFF '
+            outlname = 'Master_'
+            cmdlist.append(''.join([onoff, outlname, str(num)]))
+        print(cmdlist)
+        commtel(tel,cmdlist)
+
+def sendtel(tel,tcmd):
+    print(tcmd)
+    tel.write(tcmd)
+    tel.write(bytes("\r", encoding='ascii'))
+    time.sleep(1)
 
 
+def login(host):
+    tel = telnetlib.Telnet('9.151.140.15{}'.format(host))
+    tel.read_until(b"User Name :")
+    sendtel(tel,b"apc")
+    tel.read_until(b"Password  :")
+    sendtel(tel,b'apc')
+    tel.read_until(b"apc>")
+    return(tel)
 
+def commtel(tel,cmdlist):
+    login(tel)
+    for tcmd in cmdlist:
+        print(tcmd.encode())
+        sendtel(tel,tcmd.encode())
+    sendtel(tel,b'exit')
+
+texecute('f2_3ph', 4)
+
+######GUI part##############
 class ApcGui():
 
     def __init__(self):
         self.run = True
         self._root = Tk()
         self._root.title('LED test config\control tool')
+        self._root.resizable(width=False,height=False)
         #main window
         self._mainframe = tk.Frame(self._root)
         self._mainframe.grid(row=0, column=0, sticky=(E, W, N, S))
@@ -110,6 +162,8 @@ class ApcGui():
         self._pdu3conf_btn.grid(row=1, column=1, sticky=W, padx=5)
         self._pdu4conf_btn=tk.Button(self._configframe,text='PDU-4', command=lambda: self.pduconf(4))
         self._pdu4conf_btn.grid(row=1, column=2, sticky=W, padx=5)
+        #radio buttons - system selection
+
         self._root.mainloop()
 
 
@@ -142,3 +196,5 @@ class ApcGui():
         self._texbox.config(state="disabled")
         self._root.update()
 gui=ApcGui()
+
+
