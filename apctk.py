@@ -87,39 +87,40 @@ def texecute(systype, host):  # patterns generation & execution
     tel = login(host)
     # usage  texecute('f2_3ph', 1), 'f4_3ph'
 
+    # if systype == 'f2_3ph':
+    #     cmdlist = []
+    #     for num in range(13, 17):
+    #         onoff = 'OFF '
+    #         outlname = 'Master_'
+    #         cmdlist.append(''.join([onoff, outlname, str(num)]))
+    #     print(cmdlist)
+    #     commtel(tel,cmdlist)
+    #     # print(''.join([onoff,outlname,str(num)]))
     if systype == 'f2_3ph':
-        cmdlist = []
-        for num in range(13, 17):
-            onoff = 'OFF '
-            outlname = 'Master_'
-            cmdlist.append(''.join([onoff, outlname, str(num)]))
-        print(cmdlist)
-        commtel(tel,cmdlist)
-        # print(''.join([onoff,outlname,str(num)]))
-    if systype == 'f4_3ph':
-        cmdlist = []
-        for num in range(13, 17):
-            onoff = 'OFF '
-            outlname = 'Master_'
-            cmdlist.append(''.join([onoff, outlname, str(num)]))
-        print(cmdlist)
+        #cmdlist = []
+        cmdlist=['olReboot all','olReboot all']
+        # for num in range(13, 17):
+        #     onoff = 'OFF '
+        #     outlname = 'Master_'
+        #     cmdlist.append(''.join([onoff, outlname, str(num)]))
+        # print(cmdlist)
         commtel(tel,cmdlist)
 
 def sendtel(tel,tcmd):
     print(tcmd)
     tel.write(tcmd)
-    tel.write(bytes("\r", encoding='ascii'))
+    time.sleep(1)
+    tel.write(b'\r')
     time.sleep(1)
 
 
 def login(host):
     tel = telnetlib.Telnet('9.151.140.15{}'.format(host))
-    tel.read_until(b"User Name :")
-    sendtel(tel,b"apc")
-    tel.read_until(b"Password  :")
+    tel.read_until(b'User Name')
     sendtel(tel,b'apc')
-    tel.read_until(b"apc>")
-    return(tel)
+    tel.read_until(b'Password  :')
+    sendtel(tel,b'apc')
+    sendtel(tel,b'olReboot all')
 
 def commtel(tel,cmdlist):
     login(tel)
