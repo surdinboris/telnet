@@ -43,7 +43,7 @@ def confparse():
 ######Serial part##############
 def crconn():
     ser = serial.Serial(
-        'COM5',
+        'COM1',
         timeout=3,
         baudrate=9600,
         xonxoff=0,
@@ -80,7 +80,6 @@ def handler(ser,comm): #login/accept handler
         raise BaseException(SyntaxError)
 
 def conn_init(ser): #initiation procedure for console - need to send enter two  or more times fastly
-
     for x in range(3):
         ser.write(bytes("\r", encoding='ascii'))
 
@@ -112,36 +111,27 @@ def getver(): #returns aos version
 # command("tcpip -S enable -i 192.168.0.159 -s 255.255.255.0 -g 0.0.0.0 -h pdu-7", 'config')
 
 ######Telnet part##############
-def texecute(systype, host):  # patterns generation & execution
+def texecute(host, outl, delay):  # patterns generation & execution
+    print('executing %s %s %s' %(host, outl, delay))
     tel = telnetlib.Telnet('9.151.140.15{}'.format(host))
     tel.read_until(b'User Name')
     sendtel(tel,b'apc')
     tel.read_until(b'Password  :')
     sendtel(tel,b'apc')
-
-    if systype == 'f2_3ph':
-        #cmdlist=['olReboot all']
-        cmdlist =[]
-        # for num in range(13, 17):
-        #     onoff = 'OFF '
-        #     outlname = 'Master_'
-        #     cmdlist.append(''.join([onoff, outlname, str(num)]))
-        # print(cmdlist)
-        commtel(tel,cmdlist)
+    if type(outl) == str:
+        sendtel(tel, ("olOff %s" %outl).encode())
+    if type(outl) == list:
+        for ou in outl:
+            sendtel(tel, ("olOff %s" % ou).encode())
+    if time.sleep(delay):
+        sendtel(tel, ("olOn %s" % outl).encode())
+    sendtel(tel,b'exit')
 
 def sendtel(tel,tcmd):
     tel.write(tcmd)
     time.sleep(1)
     tel.write(b'\r')
-    time.sleep(1)
 
-def commtel(tel,cmdlist):
-    for tcmd in cmdlist:
-        print(tcmd.encode())
-        sendtel(tel,tcmd.encode())
-    sendtel(tel,b'exit')
-
-texecute('f2_3ph', 1)
 
 ######GUI part##############
 class ApcGui():
@@ -196,7 +186,29 @@ class ApcGui():
 
     def starttest(self):
         self._startbutton.config(text='Stop testing')
-        print(list(self.syspatterns.values())[self.syst.get()])
+        self.pattrns=(list(self.syspatterns.values())[self.syst.get()]) #get command scenarios for each pdu
+        self.print_to_gui('Started test of %s.\n    Turning of all enclosures...' % list(self.syspatterns)[self.syst.get()])
+        print(self.pattrns)
+        self.perpdulist=[]
+        for self.itm in self.pattrns:
+            print(self.itm.split(','))
+            self.perpdulist.append((self.itm.split(',')))
+        print(zip(*self.perpdulist))
+        # for self.enc,self.pattern in enumerate(self.pattrns,1):
+        #     print('turning off enc %s' %self.enc)
+            #building list of outlets for every pdu
+            # print(self.pattern)
+            # for self.pdu,self.outl in enumerate((self.pattern).split(','),1):
+            #     print('turning off pdu %s outlet %s' %(self.pdu, self.outl))
+            #     if self.outl == '0': #skipping zero outlets (i.e. outlets that not in use in template
+            #         pass
+            #     else:
+            #         texecute(self.pdu,self.outl,0) #if delay ==0, outled will be  turned off permanently
+
+        # for self.enc,self.pattern in enumerate(self.pattrns): #enclosures iteration
+        #     self.print_to_gui('Turning on enclosure %s' %self.enc)
+
+        #    texecute(self.pdu,)
         #need to pass outlet values to pdu's and print feedback to operator
 
     def pduconf(self,pdunum):
