@@ -6,6 +6,7 @@ import tkinter.scrolledtext as tkst
 from tkinter import *
 import os
 import re
+from serial.serialutil import SerialException
 ######Config file parsing part##############
 #apctk config file
 #system types format sysname, output groups: pdu1,pdu2; pdu1,pdu2,pdu3,pdu4; ....
@@ -36,6 +37,7 @@ def confparse():
                 groupstr=confrow[2].replace(" ", "").replace("\t", "")
                 groups=groupstr.rstrip(';').split(";")
                 syspatterns[sysname]=groups
+
     return(delay,syspatterns)
 
 ######Serial part##############
@@ -78,6 +80,7 @@ def handler(ser,comm): #login/accept handler
         raise BaseException(SyntaxError)
 
 def conn_init(ser): #initiation procedure for console - need to send enter two  or more times fastly
+
     for x in range(3):
         ser.write(bytes("\r", encoding='ascii'))
 
@@ -152,44 +155,55 @@ class ApcGui():
     def __init__(self):
         self.delay,self.syspatterns=confparse()
         self._root = Tk()
+        self.syst=IntVar()
+        self.syst.set(0)
         self._root.title('LED test config\control tool')
         self._root.resizable(width=False,height=False)
         #main window
         self._mainframe = tk.Frame(self._root)
         self._mainframe.grid(row=0, column=0, sticky=(E, W, N, S))
-        #output part
-        self._textboxframe=tk.LabelFrame(self._mainframe, text='Work log')
-        self._textboxframe.grid(row=0, column=1, sticky=(W,N))
-        self._textboxframe.columnconfigure(0, weight=1)
-        self._textboxframe.rowconfigure(0, weight=1)
-        self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=45, height=20, state='disabled')
-        self._texbox.grid(row=0, column=0, sticky=(E,N))
         #config part
         self._configframe=tk.LabelFrame(self._mainframe, text='Config')
-        self._configframe.grid(row=0, column=0, sticky=(W,N))
+        self._configframe.grid(row=0, padx=5, pady=5, column=0, sticky=(W,N))
         self._configframe.columnconfigure(0, weight=1)
         self._configframe.rowconfigure(0, weight=1)
 
+        #output part
+        self._textboxframe=tk.LabelFrame(self._mainframe, text='Work log')
+        self._textboxframe.grid(row=0,padx=5, pady=5, column=1, rowspan=2, sticky=(W,N))
+        self._textboxframe.columnconfigure(0, weight=1)
+        self._textboxframe.rowconfigure(0, weight=1)
+        self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=45, height=25, state='disabled')
+        self._texbox.grid(row=0, column=1, sticky=(W,N))
+
         #config buttons
         self._pdu1conf_btn=tk.Button(self._configframe,text='PDU-1', command=lambda: self.pduconf(1))
-        self._pdu1conf_btn.grid(row=0, column=1, sticky=W, padx=5)
+        self._pdu1conf_btn.grid(row=0,padx=3, pady=3, column=1, sticky=W)
         self._pdu2conf_btn=tk.Button(self._configframe,text='PDU-2', command=lambda: self.pduconf(2))
-        self._pdu2conf_btn.grid(row=0, column=2, sticky=W, padx=5)
+        self._pdu2conf_btn.grid(row=0,padx=3, pady=3, column=2, sticky=W)
         self._pdu3conf_btn=tk.Button(self._configframe,text='PDU-3', command=lambda: self.pduconf(3))
-        self._pdu3conf_btn.grid(row=1, column=1, sticky=W, padx=5)
+        self._pdu3conf_btn.grid(row=1,padx=3, pady=3,  column=1, sticky=W)
         self._pdu4conf_btn=tk.Button(self._configframe,text='PDU-4', command=lambda: self.pduconf(4))
-        self._pdu4conf_btn.grid(row=1, column=2, sticky=W, padx=5)
+        self._pdu4conf_btn.grid(row=1,padx=3, pady=3,  column=2, sticky=W)
         #testing part
         self._testingframe=tk.LabelFrame(self._mainframe, text='Testing')
-        self._testingframe.grid(row=1, column=0,sticky=(E,N))
+        self._testingframe.grid(row=1, padx=5, pady=5, column=0,sticky=(W,N))
         self._testingframe.columnconfigure(0, weight=1)
         self._testingframe.rowconfigure(0, weight=1)
         #radio buttons - system selection
-        for self.ind, self.syspattern in  enumerate(self.syspatterns.keys()):
-            self._radiobutton = tk.Radiobutton(self._testingframe, padx=0, text=self.syspattern, variable=tk.IntVar(), value=1)
-            self._radiobutton.grid(row=self.ind, column=1, sticky=W, padx=5)
+        for self.ind,self.syspattern in enumerate(self.syspatterns):
+            self._radiobutton = tk.Radiobutton(self._testingframe, text=self.syspattern, variable=self.syst, value=self.ind)
+            self._radiobutton.grid(row=self.ind,  padx=3, pady=3, column=0,sticky=(W,N))
+        #test buttons - start stop test
+        self._startbutton=tk.Button(self._testingframe, text='Start testing', command=self.starttest)
+        self._startbutton.grid(row=self.ind+1,  padx=3, pady=3, column=0,sticky=(W,N))
+        self.print_to_gui("Please configure PDU's via Serial cable (RJ-11), choose proper system type and run testing procedure.")
         self._root.mainloop()
 
+    def starttest(self):
+        self._startbutton.config(text='Stop testing')
+        print(list(self.syspatterns.values())[self.syst.get()])
+        #need to pass outlet values to pdu's and print feedback to operator
 
     def pduconf(self,pdunum):
             self.butts = [self._pdu1conf_btn, self._pdu2conf_btn, self._pdu3conf_btn, self._pdu4conf_btn]
@@ -215,13 +229,10 @@ class ApcGui():
         return 'break'
 
     def print_to_gui(self, txtstr):
-        self._texbox.config(state="normal")
-        self._texbox.insert('end', txtstr)
+        self._texbox.config(state='normal')
+        self._texbox.insert('end', '%s\n' %txtstr)
         self._texbox.config(state="disabled")
         self._root.update()
 gui=ApcGui()
 
-#
-# dict={45:'45'}
-# for f in dict.values():
-#     print(f.)
+
