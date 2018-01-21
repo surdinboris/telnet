@@ -181,12 +181,13 @@ class ApcGui():
         self._pdu4conf_btn.grid(row=1, column=2, sticky=W, padx=5)
         #testing part
         self._testingframe=tk.LabelFrame(self._mainframe, text='Testing')
-        self._testingframe.grid(row=0, column=0)
+        self._testingframe.grid(row=1, column=0,sticky=(E,N))
         self._testingframe.columnconfigure(0, weight=1)
         self._testingframe.rowconfigure(0, weight=1)
         #radio buttons - system selection
-        for self.syspattern in  self.syspatterns.keys():
-            self._radiobutton = tk.Radiobutton(self._testingframe, padx=0, text=self.syspattern, variable=tk.IntVar(), value=1).pack(anchor=tk.W)
+        for self.ind, self.syspattern in  enumerate(self.syspatterns.keys()):
+            self._radiobutton = tk.Radiobutton(self._testingframe, padx=0, text=self.syspattern, variable=tk.IntVar(), value=1)
+            self._radiobutton.grid(row=self.ind, column=1, sticky=W, padx=5)
         self._root.mainloop()
 
 
