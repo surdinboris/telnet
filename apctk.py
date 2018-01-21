@@ -7,21 +7,36 @@ from tkinter import *
 import os
 import re
 ######Config file parsing part##############
-conf=open(os.path.join(os.getcwd(),'apctk.conf'), 'r')
-sysentry = {}
-for row in conf.readlines():
-    if re.search(r"^delay:(\d{1,})",row): #delay parameter
-        delay = re.search(r".*delay:(\d{1,})",row)[1]
-        print('found delay %s' %delay)
-    else: #regular row
-        confrow=re.search(r"^<(.*)>.*output groups:(.*)",row)
-        if confrow:
-            sysname=confrow[1]
-            groupstr=confrow[2].replace(" ", "").replace("\t", "")
-            groups=groupstr.rstrip(';').split(";")
-            sysentry[sysname]=groups
-for i in sysentry.items():
-    print(i)
+#apctk config file
+#system types format sysname, output groups: pdu1,pdu2; pdu1,pdu2,pdu3,pdu4; ....
+#system  step-by-step will turn off and turn on every group per declared order with delay
+#parameter shoulb be entered from beginning of the row, else it will be ignored
+# delay:5
+# #System list
+# <f1000_1ph_2> output groups:12,13; 17,18; 19,20;
+# <f1000_3ph_2> output groups:12,13; 17,18; 19,20;
+# <f2000_1ph_2> output groups:12,13; 17,18; 19,20;
+# <f2000_3ph_2> output groups:12,13; 17,18; 19,20;
+# <f4000_1ph_4> output groups:12,13; 17, 18,18,16;  19,20, 17,20;
+# <f4000_3ph_2> output groups:12,13; 17,18; 19,20;
+# <f6000_1ph_4> output groups:12,13; 17,18; 19,20;
+# <f6000_3ph_4> output groups:12,13; 17,18; 19,20;
+
+def confparse():
+    conf=open(os.path.join(os.getcwd(),'apctk.conf'), 'r')
+    syspatterns = {}
+    delay=''
+    for row in conf.readlines():
+        if re.search(r"^delay:(\d{1,})",row): #delay
+            delay = re.search(r".*delay:(\d{1,})",row)[1]
+        else: #regular row
+            confrow=re.search(r"^<(.*)>.*output groups:(.*)",row)
+            if confrow:
+                sysname=confrow[1]
+                groupstr=confrow[2].replace(" ", "").replace("\t", "")
+                groups=groupstr.rstrip(';').split(";")
+                syspatterns[sysname]=groups
+    return(delay,syspatterns)
 
 ######Serial part##############
 def crconn():
@@ -135,7 +150,7 @@ texecute('f2_3ph', 1)
 class ApcGui():
 
     def __init__(self):
-        self.run = True
+        self.delay,self.syspatterns=confparse()
         self._root = Tk()
         self._root.title('LED test config\control tool')
         self._root.resizable(width=False,height=False)
@@ -147,13 +162,14 @@ class ApcGui():
         self._textboxframe.grid(row=0, column=1, sticky=(W,N))
         self._textboxframe.columnconfigure(0, weight=1)
         self._textboxframe.rowconfigure(0, weight=1)
-        self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=45, height=10, state='disabled')
-        self._texbox.grid(row=0, column=0, sticky=W, padx=5)
+        self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=45, height=20, state='disabled')
+        self._texbox.grid(row=0, column=0, sticky=(E,N))
         #config part
         self._configframe=tk.LabelFrame(self._mainframe, text='Config')
         self._configframe.grid(row=0, column=0, sticky=(W,N))
         self._configframe.columnconfigure(0, weight=1)
         self._configframe.rowconfigure(0, weight=1)
+
         #config buttons
         self._pdu1conf_btn=tk.Button(self._configframe,text='PDU-1', command=lambda: self.pduconf(1))
         self._pdu1conf_btn.grid(row=0, column=1, sticky=W, padx=5)
@@ -163,8 +179,14 @@ class ApcGui():
         self._pdu3conf_btn.grid(row=1, column=1, sticky=W, padx=5)
         self._pdu4conf_btn=tk.Button(self._configframe,text='PDU-4', command=lambda: self.pduconf(4))
         self._pdu4conf_btn.grid(row=1, column=2, sticky=W, padx=5)
+        #testing part
+        self._testingframe=tk.LabelFrame(self._mainframe, text='Testing')
+        self._testingframe.grid(row=0, column=0)
+        self._testingframe.columnconfigure(0, weight=1)
+        self._testingframe.rowconfigure(0, weight=1)
         #radio buttons - system selection
-
+        for self.syspattern in  self.syspatterns.keys():
+            self._radiobutton = tk.Radiobutton(self._testingframe, padx=0, text=self.syspattern, variable=tk.IntVar(), value=1).pack(anchor=tk.W)
         self._root.mainloop()
 
 
@@ -198,4 +220,7 @@ class ApcGui():
         self._root.update()
 gui=ApcGui()
 
-
+#
+# dict={45:'45'}
+# for f in dict.values():
+#     print(f.)
