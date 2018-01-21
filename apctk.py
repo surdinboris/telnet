@@ -97,12 +97,6 @@ def command(comm,type):
     ser.close()
     return True
 
-def print_to_gui(txtstr):
-    gui._texbox.config(state="normal")
-    gui._texbox.insert('end', txtstr)
-    gui._texbox.config(state="disabled")
-    gui._root.update()
-
 def getver(): #returns aos version
     ser=crconn()
     handler(ser,['about'])
