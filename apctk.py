@@ -7,24 +7,21 @@ from tkinter import *
 import os
 import re
 ######Config file parsing part##############
-
 conf=open(os.path.join(os.getcwd(),'apctk.conf'), 'r')
 sysentry = {}
 for row in conf.readlines():
-    if re.search(r".*delay:(\d{1,})",row):
+    if re.search(r"^delay:(\d{1,})",row): #delay parameter
         delay = re.search(r".*delay:(\d{1,})",row)[1]
         print('found delay %s' %delay)
-    confrow=re.search(r".*<(.*)>.*output groups:(.*)",row)
-    if confrow:
-        sysname=confrow[1]
-        groupstr=confrow[2].replace(" ", "").replace("\t", "")
-        groups=groupstr.rstrip(';').split(";")
-        sysentry[sysname]=groups
-
+    else: #regular row
+        confrow=re.search(r"^<(.*)>.*output groups:(.*)",row)
+        if confrow:
+            sysname=confrow[1]
+            groupstr=confrow[2].replace(" ", "").replace("\t", "")
+            groups=groupstr.rstrip(';').split(";")
+            sysentry[sysname]=groups
 for i in sysentry.items():
     print(i)
-
-
 
 ######Serial part##############
 def crconn():
