@@ -4,12 +4,32 @@ import telnetlib
 import tkinter as tk
 import tkinter.scrolledtext as tkst
 from tkinter import *
+import os
+import re
+######Config file parsing part##############
+
+conf=open(os.path.join(os.getcwd(),'apctk.conf'), 'r')
+sysentry = {}
+for row in conf.readlines():
+    if re.search(r".*delay:(\d{1,})",row):
+        delay = re.search(r".*delay:(\d{1,})",row)[1]
+        print('found delay %s' %delay)
+    confrow=re.search(r".*<(.*)>.*output groups:(.*)",row)
+    if confrow:
+        sysname=confrow[1]
+        groupstr=confrow[2].replace(" ", "").replace("\t", "")
+        groups=groupstr.rstrip(';').split(";")
+        sysentry[sysname]=groups
+
+for i in sysentry.items():
+    print(i)
+
+
 
 ######Serial part##############
-
 def crconn():
     ser = serial.Serial(
-        'COM1',
+        'COM5',
         timeout=3,
         baudrate=9600,
         xonxoff=0,
@@ -84,21 +104,15 @@ def getver(): #returns aos version
 
 ######Telnet part##############
 def texecute(systype, host):  # patterns generation & execution
-    tel = login(host)
-    # usage  texecute('f2_3ph', 1), 'f4_3ph'
+    tel = telnetlib.Telnet('9.151.140.15{}'.format(host))
+    tel.read_until(b'User Name')
+    sendtel(tel,b'apc')
+    tel.read_until(b'Password  :')
+    sendtel(tel,b'apc')
 
-    # if systype == 'f2_3ph':
-    #     cmdlist = []
-    #     for num in range(13, 17):
-    #         onoff = 'OFF '
-    #         outlname = 'Master_'
-    #         cmdlist.append(''.join([onoff, outlname, str(num)]))
-    #     print(cmdlist)
-    #     commtel(tel,cmdlist)
-    #     # print(''.join([onoff,outlname,str(num)]))
     if systype == 'f2_3ph':
-        #cmdlist = []
-        cmdlist=['olReboot all','olReboot all']
+        #cmdlist=['olReboot all']
+        cmdlist =[]
         # for num in range(13, 17):
         #     onoff = 'OFF '
         #     outlname = 'Master_'
@@ -107,29 +121,18 @@ def texecute(systype, host):  # patterns generation & execution
         commtel(tel,cmdlist)
 
 def sendtel(tel,tcmd):
-    print(tcmd)
     tel.write(tcmd)
     time.sleep(1)
     tel.write(b'\r')
     time.sleep(1)
 
-
-def login(host):
-    tel = telnetlib.Telnet('9.151.140.15{}'.format(host))
-    tel.read_until(b'User Name')
-    sendtel(tel,b'apc')
-    tel.read_until(b'Password  :')
-    sendtel(tel,b'apc')
-    sendtel(tel,b'olReboot all')
-
 def commtel(tel,cmdlist):
-    login(tel)
     for tcmd in cmdlist:
         print(tcmd.encode())
         sendtel(tel,tcmd.encode())
     sendtel(tel,b'exit')
 
-texecute('f2_3ph', 4)
+texecute('f2_3ph', 1)
 
 ######GUI part##############
 class ApcGui():
@@ -143,7 +146,7 @@ class ApcGui():
         self._mainframe = tk.Frame(self._root)
         self._mainframe.grid(row=0, column=0, sticky=(E, W, N, S))
         #output part
-        self._textboxframe=tk.LabelFrame(self._mainframe, text='Output')
+        self._textboxframe=tk.LabelFrame(self._mainframe, text='Work log')
         self._textboxframe.grid(row=0, column=1, sticky=(W,N))
         self._textboxframe.columnconfigure(0, weight=1)
         self._textboxframe.rowconfigure(0, weight=1)
