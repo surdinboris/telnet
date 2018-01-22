@@ -187,6 +187,7 @@ class ApcGui():
             else:
                 break
         self.allencloper('On')
+        self._startbutton.config(text='Start testing', command=self.starttest)
         self.print_to_gui('Test is done.')
 
     def allencloper(self,comm):   #serial enclosure outlet operation at beginning and ending test
