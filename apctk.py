@@ -96,7 +96,6 @@ def getver(): #returns aos version
 
 ######Telnet part##############
 def texecute(host, outl, act):  # patterns generation & execution. delay in sec, act - On, Off
-    print('executing %s %s' %(host, outl))
     tel = telnetlib.Telnet('9.151.140.15{}'.format(host))
     tel.read_until(b'User Name')
     sendtel(tel,b'apc')
@@ -108,7 +107,6 @@ def texecute(host, outl, act):  # patterns generation & execution. delay in sec,
         out=','.join(outl)
         sendtel(tel, ("ol%s %s" % (act, out)).encode())
     sendtel(tel,b'exit')
-    print('Done')
 
 def sendtel(tel,tcmd):
     tel.write(tcmd)
@@ -118,10 +116,11 @@ def sendtel(tel,tcmd):
 ######GUI part##############
 class ApcGui():
     def __init__(self):
-        self.delay,self.syspatterns=confparse()
+        self.delay,self.syspatterns=confparse() #Configuration parsing - building menu items and testing delay
         self._root = Tk()
-        self.syst=IntVar()
-        self.syst.set(0)
+        self.syst=IntVar()  #Radiobutton default value
+        self.syst.set(0)    #Radiobutton default value
+        self.testrun = True #Test interrupt var
         self._root.title('LED test config\control tool')
         self._root.resizable(width=False,height=False)
         #main window
@@ -164,26 +163,31 @@ class ApcGui():
         self._root.mainloop()
 
     def starttest(self):
-        self._startbutton.config(text='Stop testing')
+        global testrun
+        self.testrun = True
+        self._startbutton.config(text='Stop testing', command=self.stoptest)
         self.pattrns=(list(self.syspatterns.values())[self.syst.get()]) #get command scenarios for each pdu
         self.print_to_gui('Started test of %s' % list(self.syspatterns)[self.syst.get()])
         #Generating pattern per PDU for faster operation
         self.pttrnlist=[(self.itm.split(',')) for self.itm in self.pattrns]
         self.allencloper('Off')
-
     #Testing procedure - every enclosure will be turned on and off
         for self.enc,self.pattern in enumerate(self.pttrnlist,1): #enclosures iteration
-            self.print_to_gui('Turning on enclosure %s' %self.enc)
-
-            for self.tpdu, self.toutl in enumerate(self.pattern,1):
-                print()
-                #sending command to each pdu
-                print(self.tpdu,self.toutl)
-                if self.toutl != '0':
-                    texecute(self.tpdu, self.toutl,'On')
-                    time.sleep(6)
-                    texecute(self.tpdu, self.toutl, 'Off')
+            if self.testrun == True:
+                self.print_to_gui('Turning on enclosure %s' %self.enc)
+                for self.tpdu, self.toutl in enumerate(self.pattern,1):
+                    #sending command to each pdu
+                    if self.toutl != '0':
+                        if self.testrun == True:
+                            texecute(self.tpdu, self.toutl,'On')
+                            time.sleep(int(self.delay))
+                            texecute(self.tpdu, self.toutl, 'Off')
+                        else:
+                            break
+            else:
+                break
         self.allencloper('On')
+        self.print_to_gui('Test is done.')
 
     def allencloper(self,comm):   #serial enclosure outlet operation at beginning and ending test
         self.print_to_gui(
@@ -193,7 +197,10 @@ class ApcGui():
             self.outl=[x for x in filter(lambda x: x != '0',self.itm)] #collecting only involved outlets
             if len(self.outl) > 0:
                 texecute(self.pdu, self.outl,comm)
-
+    def stoptest(self):
+        self.testrun=False
+        self.print_to_gui('Test was interrupted.')
+        self._root.after(2000, self._startbutton.config(text='Start testing', command=self.starttest))
     def pduconf(self,pdunum):
             self.butts = [self._pdu1conf_btn, self._pdu2conf_btn, self._pdu3conf_btn, self._pdu4conf_btn]
             for butt in self.butts:
@@ -203,25 +210,19 @@ class ApcGui():
             self.pduconf=self.ignore
             self._root.update()
             command("tcpip -S enable -i 9.151.140.15{} -s 255.255.255.0 -g 0.0.0.0 -h pdu-{}".format(pdunum,pdunum), 'config')
-
             for butt in self.butts:
                 butt.config(state='active')
             self._root.after(2000, self.bindit)
-
-
     def bindit(self):
         for butt in self.butts:
             butt.config(state='active')
         self.pduconf=self.pduconfbu
-
     def ignore(self,*args,**kwargs):
         return 'break'
-
     def print_to_gui(self, txtstr):
         self._texbox.config(state='normal')
         self._texbox.insert('end', '%s\n' %txtstr)
         self._texbox.config(state="disabled")
+        self._texbox.see("end")
         self._root.update()
 gui=ApcGui()
-
-
