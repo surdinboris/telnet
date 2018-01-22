@@ -95,8 +95,8 @@ def getver(): #returns aos version
 # command("tcpip -S enable -i 192.168.0.159 -s 255.255.255.0 -g 0.0.0.0 -h pdu-7", 'config')
 
 ######Telnet part##############
-def texecute(host, outl, delay, act):  # patterns generation & execution. delay in sec, act - On, Off
-    print('executing %s %s %s' %(host, outl, delay))
+def texecute(host, outl, act):  # patterns generation & execution. delay in sec, act - On, Off
+    print('executing %s %s' %(host, outl))
     tel = telnetlib.Telnet('9.151.140.15{}'.format(host))
     tel.read_until(b'User Name')
     sendtel(tel,b'apc')
@@ -166,22 +166,33 @@ class ApcGui():
     def starttest(self):
         self._startbutton.config(text='Stop testing')
         self.pattrns=(list(self.syspatterns.values())[self.syst.get()]) #get command scenarios for each pdu
-        self.print_to_gui('Started test of %s.\n    Turning off all enclosures...' % list(self.syspatterns)[self.syst.get()])
+        self.print_to_gui('Started test of %s' % list(self.syspatterns)[self.syst.get()])
         #Generating pattern per PDU for faster operation
-        self.perpdulist=[(self.itm.split(',')) for self.itm in self.pattrns]
-        self.perpdu=[self.z for self.z in zip(*self.perpdulist)]
+        self.pttrnlist=[(self.itm.split(',')) for self.itm in self.pattrns]
+        self.allencloper('Off')
+
+    #Testing procedure - every enclosure will be turned on and off
+        for self.enc,self.pattern in enumerate(self.pttrnlist,1): #enclosures iteration
+            self.print_to_gui('Turning on enclosure %s' %self.enc)
+
+            for self.tpdu, self.toutl in enumerate(self.pattern,1):
+                print()
+                #sending command to each pdu
+                print(self.tpdu,self.toutl)
+                if self.toutl != '0':
+                    texecute(self.tpdu, self.toutl,'On')
+                    time.sleep(6)
+                    texecute(self.tpdu, self.toutl, 'Off')
+        self.allencloper('On')
+
+    def allencloper(self,comm):   #serial enclosure outlet operation at beginning and ending test
+        self.print_to_gui(
+            'Turning %s all enclosures...' %comm)
+        self.perpdu=[self.z for self.z in zip(*self.pttrnlist)]
         for self.pdu,self.itm in enumerate(self.perpdu,1):
             self.outl=[x for x in filter(lambda x: x != '0',self.itm)] #collecting only involved outlets
             if len(self.outl) > 0:
-                texecute(self.pdu, self.outl, 0,'Off')
-
-        #Testing procedure - every enclosure will be turned on and off
-
-        # for self.enc,self.pattern in enumerate(self.pattrns): #enclosures iteration
-        #     self.print_to_gui('Turning on enclosure %s' %self.enc)
-
-        #    texecute(self.pdu,)
-        #need to pass outlet values to pdu's and print feedback to operator
+                texecute(self.pdu, self.outl,comm)
 
     def pduconf(self,pdunum):
             self.butts = [self._pdu1conf_btn, self._pdu2conf_btn, self._pdu3conf_btn, self._pdu4conf_btn]
