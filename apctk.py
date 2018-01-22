@@ -8,21 +8,6 @@ import os
 import re
 from serial.serialutil import SerialException
 ######Config file parsing part##############
-#apctk config file
-#system types format sysname, output groups: pdu1,pdu2; pdu1,pdu2,pdu3,pdu4; ....
-#system  step-by-step will turn off and turn on every group per declared order with delay
-#parameter shoulb be entered from beginning of the row, else it will be ignored
-# delay:5
-# #System list
-# <f1000_1ph_2> output groups:12,13; 17,18; 19,20;
-# <f1000_3ph_2> output groups:12,13; 17,18; 19,20;
-# <f2000_1ph_2> output groups:12,13; 17,18; 19,20;
-# <f2000_3ph_2> output groups:12,13; 17,18; 19,20;
-# <f4000_1ph_4> output groups:12,13; 17, 18,18,16;  19,20, 17,20;
-# <f4000_3ph_2> output groups:12,13; 17,18; 19,20;
-# <f6000_1ph_4> output groups:12,13; 17,18; 19,20;
-# <f6000_3ph_4> output groups:12,13; 17,18; 19,20;
-
 def confparse():
     conf=open(os.path.join(os.getcwd(),'apctk.conf'), 'r')
     syspatterns = {}
@@ -37,7 +22,6 @@ def confparse():
                 groupstr=confrow[2].replace(" ", "").replace("\t", "")
                 groups=groupstr.rstrip(';').split(";")
                 syspatterns[sysname]=groups
-
     return(delay,syspatterns)
 
 ######Serial part##############
@@ -111,7 +95,7 @@ def getver(): #returns aos version
 # command("tcpip -S enable -i 192.168.0.159 -s 255.255.255.0 -g 0.0.0.0 -h pdu-7", 'config')
 
 ######Telnet part##############
-def texecute(host, outl, delay):  # patterns generation & execution
+def texecute(host, outl, delay, act):  # patterns generation & execution. delay in sec, act - On, Off
     print('executing %s %s %s' %(host, outl, delay))
     tel = telnetlib.Telnet('9.151.140.15{}'.format(host))
     tel.read_until(b'User Name')
@@ -119,23 +103,20 @@ def texecute(host, outl, delay):  # patterns generation & execution
     tel.read_until(b'Password  :')
     sendtel(tel,b'apc')
     if type(outl) == str:
-        sendtel(tel, ("olOff %s" %outl).encode())
+        sendtel(tel, ("ol%s %s" % (act,outl)).encode())
     if type(outl) == list:
-        for ou in outl:
-            sendtel(tel, ("olOff %s" % ou).encode())
-    if time.sleep(delay):
-        sendtel(tel, ("olOn %s" % outl).encode())
+        out=','.join(outl)
+        sendtel(tel, ("ol%s %s" % (act, out)).encode())
     sendtel(tel,b'exit')
+    print('Done')
 
 def sendtel(tel,tcmd):
     tel.write(tcmd)
     time.sleep(1)
     tel.write(b'\r')
 
-
 ######GUI part##############
 class ApcGui():
-
     def __init__(self):
         self.delay,self.syspatterns=confparse()
         self._root = Tk()
@@ -151,7 +132,6 @@ class ApcGui():
         self._configframe.grid(row=0, padx=5, pady=5, column=0, sticky=(W,N))
         self._configframe.columnconfigure(0, weight=1)
         self._configframe.rowconfigure(0, weight=1)
-
         #output part
         self._textboxframe=tk.LabelFrame(self._mainframe, text='Work log')
         self._textboxframe.grid(row=0,padx=5, pady=5, column=1, rowspan=2, sticky=(W,N))
@@ -159,7 +139,6 @@ class ApcGui():
         self._textboxframe.rowconfigure(0, weight=1)
         self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=45, height=25, state='disabled')
         self._texbox.grid(row=0, column=1, sticky=(W,N))
-
         #config buttons
         self._pdu1conf_btn=tk.Button(self._configframe,text='PDU-1', command=lambda: self.pduconf(1))
         self._pdu1conf_btn.grid(row=0,padx=3, pady=3, column=1, sticky=W)
@@ -187,23 +166,16 @@ class ApcGui():
     def starttest(self):
         self._startbutton.config(text='Stop testing')
         self.pattrns=(list(self.syspatterns.values())[self.syst.get()]) #get command scenarios for each pdu
-        self.print_to_gui('Started test of %s.\n    Turning of all enclosures...' % list(self.syspatterns)[self.syst.get()])
-        print(self.pattrns)
-        self.perpdulist=[]
-        for self.itm in self.pattrns:
-            print(self.itm.split(','))
-            self.perpdulist.append((self.itm.split(',')))
-        print(zip(*self.perpdulist))
-        # for self.enc,self.pattern in enumerate(self.pattrns,1):
-        #     print('turning off enc %s' %self.enc)
-            #building list of outlets for every pdu
-            # print(self.pattern)
-            # for self.pdu,self.outl in enumerate((self.pattern).split(','),1):
-            #     print('turning off pdu %s outlet %s' %(self.pdu, self.outl))
-            #     if self.outl == '0': #skipping zero outlets (i.e. outlets that not in use in template
-            #         pass
-            #     else:
-            #         texecute(self.pdu,self.outl,0) #if delay ==0, outled will be  turned off permanently
+        self.print_to_gui('Started test of %s.\n    Turning off all enclosures...' % list(self.syspatterns)[self.syst.get()])
+        #Generating pattern per PDU for faster operation
+        self.perpdulist=[(self.itm.split(',')) for self.itm in self.pattrns]
+        self.perpdu=[self.z for self.z in zip(*self.perpdulist)]
+        for self.pdu,self.itm in enumerate(self.perpdu,1):
+            self.outl=[x for x in filter(lambda x: x != '0',self.itm)] #collecting only involved outlets
+            if len(self.outl) > 0:
+                texecute(self.pdu, self.outl, 0,'Off')
+
+        #Testing procedure - every enclosure will be turned on and off
 
         # for self.enc,self.pattern in enumerate(self.pattrns): #enclosures iteration
         #     self.print_to_gui('Turning on enclosure %s' %self.enc)
