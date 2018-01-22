@@ -133,19 +133,23 @@ class ApcGui():
         self.syst=IntVar()  #Radiobutton default value
         self.syst.set(0)    #Radiobutton default value
         self.testrun = True #Test interrupt var
+        self.logo = tk.PhotoImage(file="logo.gif")
         self._root.title('LED test config\control tool')
         self._root.resizable(width=False,height=False)
         #main window
         self._mainframe = tk.Frame(self._root)
         self._mainframe.grid(row=0, column=0, sticky=(E, W, N, S))
+        #image
+        self._logo = tk.Label(self._mainframe,image=self.logo)
+        self._logo.grid(row=0, padx=5, pady=5, column=0, sticky=(W,N))
         #config part
         self._configframe=tk.LabelFrame(self._mainframe, text='Config')
-        self._configframe.grid(row=0, padx=5, pady=5, column=0, sticky=(W,N))
+        self._configframe.grid(row=1, padx=5, pady=5, column=0, sticky=(W,N))
         self._configframe.columnconfigure(0, weight=1)
         self._configframe.rowconfigure(0, weight=1)
         #output part
         self._textboxframe=tk.LabelFrame(self._mainframe, text='Work log')
-        self._textboxframe.grid(row=0,padx=5, pady=5, column=1, rowspan=2, sticky=(W,N))
+        self._textboxframe.grid(row=0,padx=5, pady=5, column=1, rowspan=3, sticky=(W,N))
         self._textboxframe.columnconfigure(0, weight=1)
         self._textboxframe.rowconfigure(0, weight=1)
         self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=45, height=25, state='disabled')
@@ -161,7 +165,7 @@ class ApcGui():
         self._pdu4conf_btn.grid(row=1,padx=3, pady=3,  column=2, sticky=W)
         #testing part
         self._testingframe=tk.LabelFrame(self._mainframe, text='Testing')
-        self._testingframe.grid(row=1, padx=5, pady=5, column=0,sticky=(W,N))
+        self._testingframe.grid(row=2, padx=5, pady=5, column=0,sticky=(W,N))
         self._testingframe.columnconfigure(0, weight=1)
         self._testingframe.rowconfigure(0, weight=1)
         #radio buttons - system selection
