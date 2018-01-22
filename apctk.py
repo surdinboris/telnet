@@ -222,7 +222,7 @@ class ApcGui():
             self.butts = [self._pdu1conf_btn, self._pdu2conf_btn, self._pdu3conf_btn, self._pdu4conf_btn]
             for self.butt in self.butts:
                 self.butt.config(state='disabled')
-            self.print_to_gui('PDU-{} config started\n'.format(pdunum))
+            self.print_to_gui('PDU-{} config started'.format(pdunum))
             self.pduconfbu=self.pduconf
             self.pduconf=self.ignore
             self._root.update()
@@ -230,6 +230,7 @@ class ApcGui():
             for self.butt in self.butts:
                 self.butt.config(state='active')
             self._root.after(2000, self.bindit)
+            self.print_to_gui('PDU-{} config ended'.format(pdunum))
     def bindit(self):
         for butt in self.butts:
             butt.config(state='active')
