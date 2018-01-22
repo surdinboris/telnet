@@ -12,9 +12,12 @@ def confparse():
     conf=open(os.path.join(os.getcwd(),'apctk.conf'), 'r')
     syspatterns = {}
     delay=''
+    comport=''
     for row in conf.readlines():
         if re.search(r"^delay:(\d{1,})",row): #delay
-            delay = re.search(r".*delay:(\d{1,})",row)[1]
+            delay = re.search(r"^delay:(\d{1,})",row)[1]
+        elif re.search(r"^comport:(.*\d)", row):  # delay
+            comport = re.search(r"^comport:(.*\d)", row)[1] #comport
         else: #regular row
             confrow=re.search(r"^<(.*)>.*output groups:(.*)",row)
             if confrow:
@@ -22,12 +25,13 @@ def confparse():
                 groupstr=confrow[2].replace(" ", "").replace("\t", "")
                 groups=groupstr.rstrip(';').split(";")
                 syspatterns[sysname]=groups
-    return(delay,syspatterns)
+    return(comport,delay,syspatterns)
 
 ######Serial part##############
-def crconn():
+def crconn(comport):
+    print('crconn', comport)
     ser = serial.Serial(
-        'COM1',
+        comport,
         timeout=3,
         baudrate=9600,
         xonxoff=0,
@@ -67,9 +71,9 @@ def conn_init(ser): #initiation procedure for console - need to send enter two  
     for x in range(3):
         ser.write(bytes("\r", encoding='ascii'))
 
-def command(comm,type):
+def command(comport,comm,type):
     print('Got command {} of type {}'.format(comm, type))
-    ser=crconn()
+    ser=crconn(comport)
     if type == 'config':
         handler(ser,[comm,'reboot','YES'])
     elif type == 'action':
@@ -80,8 +84,8 @@ def command(comm,type):
     ser.close()
     return True
 
-def getver(): #returns aos version
-    ser=crconn()
+def getver(comport): #returns aos version
+    ser=crconn(comport)
     handler(ser,['about'])
     ser.read_until(b"aos")
     ser.read_until(b"v")
@@ -116,7 +120,7 @@ def sendtel(tel,tcmd):
 ######GUI part##############
 class ApcGui():
     def __init__(self):
-        self.delay,self.syspatterns=confparse() #Configuration parsing - building menu items and testing delay
+        self.comport,self.delay,self.syspatterns=confparse() #Configuration parsing - building menu items and testing delay
         self._root = Tk()
         self.syst=IntVar()  #Radiobutton default value
         self.syst.set(0)    #Radiobutton default value
@@ -204,15 +208,15 @@ class ApcGui():
         self._root.after(2000, self._startbutton.config(text='Start testing', command=self.starttest))
     def pduconf(self,pdunum):
             self.butts = [self._pdu1conf_btn, self._pdu2conf_btn, self._pdu3conf_btn, self._pdu4conf_btn]
-            for butt in self.butts:
-                butt.config(state='disabled')
+            for self.butt in self.butts:
+                self.butt.config(state='disabled')
             self.print_to_gui('PDU-{} config started\n'.format(pdunum))
             self.pduconfbu=self.pduconf
             self.pduconf=self.ignore
             self._root.update()
-            command("tcpip -S enable -i 9.151.140.15{} -s 255.255.255.0 -g 0.0.0.0 -h pdu-{}".format(pdunum,pdunum), 'config')
-            for butt in self.butts:
-                butt.config(state='active')
+            command(self.comport,"tcpip -S enable -i 9.151.140.15{} -s 255.255.255.0 -g 0.0.0.0 -h pdu-{}".format(pdunum,pdunum), 'config')
+            for self.butt in self.butts:
+                self.butt.config(state='active')
             self._root.after(2000, self.bindit)
     def bindit(self):
         for butt in self.butts:
