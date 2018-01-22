@@ -99,6 +99,7 @@ def getver(comport): #returns aos version
 
 ######Telnet part##############
 def texecute(host, outl, act):  # patterns generation & execution. delay in sec, act - On, Off
+    print(host,outl,act)
     tel = telnetlib.Telnet('9.151.140.15{}'.format(host))
     tel.read_until(b'User Name')
     sendtel(tel,b'apc')
@@ -106,14 +107,22 @@ def texecute(host, outl, act):  # patterns generation & execution. delay in sec,
     sendtel(tel,b'apc')
     if type(outl) == str:
         sendtel(tel, ("ol%s %s" % (act,outl)).encode())
+        if tel.read_until(b'E000:'):
+            print('command passed')
+        else:
+            raise BaseException(ConnectionRefusedError)
     if type(outl) == list:
         out=','.join(outl)
         sendtel(tel, ("ol%s %s" % (act, out)).encode())
+        if tel.read_until(b'E000:'):
+            print('command list passed')
+        else:
+            raise BaseException(ConnectionRefusedError)
     sendtel(tel,b'exit')
 
 def sendtel(tel,tcmd):
     tel.write(tcmd)
-    time.sleep(1)
+    time.sleep(0.5)
     tel.write(b'\r')
 
 ######GUI part##############
@@ -184,11 +193,11 @@ class ApcGui():
                         if self.testrun == True:
                             texecute(self.tpdu, self.toutl,'On')
                             time.sleep(int(self.delay))
-                            texecute(self.tpdu, self.toutl, 'Off')
+                            texecute(self.tpdu, self.toutl,'Off')
                         else:
-                            break
+                            break #stop button pressed
             else:
-                break
+                break #stop button pressed
         self.allencloper('On')
         self._startbutton.config(text='Start testing', command=self.starttest)
         self.print_to_gui('Test is done.')
