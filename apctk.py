@@ -29,7 +29,6 @@ def confparse():
 
 ######Serial part##############
 def crconn(comport):
-    print('crconn', comport)
     ser = serial.Serial(
         comport,
         timeout=3,
