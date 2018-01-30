@@ -7,6 +7,10 @@ import tkinter.scrolledtext as tkst
 from tkinter import *
 import os
 import re
+from tkinter import messagebox
+# import threading
+# from queue import Queue
+
 import datetime
 from serial.serialutil import SerialException
 ######Config file parsing part##############
@@ -129,7 +133,57 @@ def sendtel(tel,tcmd):
     time.sleep(0.5)
     tel.write(b'\r')
 
+# class ThreadedSleep(threading.Thread):
+#     def __init__(self, queue):
+#         print('ThreadedSleep ')
+#         threading.Thread.__init__(self)
+#         self.queue = queue
+#         #self.delay=delay
+#     def run(self):
+#         time.sleep(50)  # Simulate long running process
+#         self.queue.put("Task finished")
+
 ######GUI part##############
+class Mbox(object):
+
+    root = None
+
+    def __init__(self, msg, dict_key=None):
+        """
+        msg = <str> the message to be displayed
+        dict_key = <sequence> (dictionary, key) to associate with user input
+        (providing a sequence for dict_key creates an entry for user input)
+        """
+        tki = tk
+        self.top = tki.Toplevel(Mbox.root)
+
+        frm = tki.Frame(self.top, borderwidth=4, relief='ridge')
+        frm.pack(fill='both', expand=True)
+
+        label = tki.Label(frm, text=msg)
+        label.pack(padx=4, pady=4)
+
+        caller_wants_an_entry = dict_key is not None
+
+        if caller_wants_an_entry:
+            self.entry = tki.Entry(frm)
+            self.entry.pack(pady=4)
+
+            b_submit = tki.Button(frm, text='Submit')
+            b_submit['command'] = lambda: self.entry_to_dict(dict_key)
+            b_submit.pack()
+
+        b_cancel = tki.Button(frm, text='Cancel')
+        b_cancel['command'] = self.top.destroy
+        b_cancel.pack(padx=4, pady=4)
+
+    def entry_to_dict(self, dict_key):
+        data = self.entry.get()
+        if data:
+            d, key = dict_key
+            d[key] = data
+            self.top.destroy()
+
 class ApcGui():
     def __init__(self):
 
@@ -140,6 +194,7 @@ class ApcGui():
         self.syst.set(0)    #Radiobutton default value
         self.testrun = True #Test interrupt var
         self.logo = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)),"logo.gif"))
+        self.donut = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)), "donut.gif"))
         self._root.title('LED test config/control tool')
         #fixed width
         self._root.resizable(width=False,height=False)
@@ -215,19 +270,37 @@ class ApcGui():
         for self.enc,self.pattern in enumerate(self.pttrnlist,1): #enclosures iteration
             if self.testrun == True:
                 self.print_to_gui('Turning on enclosure %s' %self.enc)
-                for self.tpdu, self.toutl in enumerate(self.pattern,1):
-                    #sending command to each pdu
-                    if self.toutl != '0':
-                        if self.testrun == True:
-                            texecute(self.tpdu, self.toutl,'Off')
-                        else:
-                            break #stop button pressed
-                time.sleep(int(self.delay))
-                for self.tpdu, self.toutl in enumerate(self.pattern,1):
+                for self.tpdu, self.toutl in enumerate(self.pattern,1): #pdu iteration
                     #sending command to each pdu
                     if self.toutl != '0':
                         if self.testrun == True:
                             texecute(self.tpdu, self.toutl,'On')
+                        else:
+                            break #stop button pressed
+
+                self._top = Toplevel()
+                self._top.title("Please check")
+                self._top.resizable(width=False, height=False)
+                self._messageframe = tk.LabelFrame(self._top, text='Picture')
+                self._messageframe.grid(row=0, column=0, sticky=(E, W, N, S))
+                self._msg = Message(self._messageframe, text='Please check')
+                self._msg.grid(row=0, padx=5, pady=5, column=0, sticky=(W, N))
+                self._frontmboxlogo = tk.Label(self._msg, image=self.donut)
+                self._frontmboxlogo.grid(row=0, padx=5, pady=5, column=0, sticky=(W, N))
+                self._buttonsframe = tk.LabelFrame(self._top)
+                self._buttonsframe.grid(row=1, column=0, sticky=(E, W, N, S))
+                self._tpok = Button(self._buttonsframe, text="Ok", command=self._top.destroy)
+                self._tpok.grid(row=1, padx=5, pady=5, column=0, sticky=(W, N))
+                self._tpcancel = Button(self._buttonsframe, text="Abort testing", command=self.combine_funcs(self.stoptest,self._top.destroy))
+                self._tpcancel.grid(row=1, padx=5, pady=5, column=1, sticky=(W, N))
+                self._top.grab_set()
+                self._root.wait_window(self._top)
+                #time.sleep(int(self.delay)) #pdu iteration
+                for self.tpdu, self.toutl in enumerate(self.pattern,1): #pdu iteration
+                    #sending command to each pdu
+                    if self.toutl != '0':
+                        if self.testrun == True:
+                            texecute(self.tpdu, self.toutl,'Off')
                         else:
                             break #stop button pressed
             else:
@@ -237,6 +310,7 @@ class ApcGui():
         self.allencloper('On')
         self._startbutton.config(text='Start testing', command=self.starttest)
         self.print_to_gui('Test is done.')
+
 
     def startreartest(self): #one-by-one PSU for each enc with target delay
         global testrun
@@ -273,6 +347,14 @@ class ApcGui():
             self.outl=[x for x in filter(lambda x: x != '0',self.itm)] #collecting only involved outlets
             if len(self.outl) > 0:
                 texecute(self.pdu, self.outl,comm)
+
+    def combine_funcs(self,*funcs):
+        def combined_func(*args, **kwargs):
+            for f in funcs:
+                f(*args, **kwargs)
+
+        return combined_func
+
     def stoptest(self):
         self.testrun=False
         self.print_to_gui('Test was interrupted.')
@@ -281,14 +363,14 @@ class ApcGui():
             self.butts = [self._pdu1conf_btn, self._pdu2conf_btn, self._pdu3conf_btn, self._pdu4conf_btn]
             for self.butt in self.butts:
                 self.butt.config(state='disabled')
-            self.print_to_gui('PDU-{} config started\n'.format(pdunum))
+            self.print_to_gui('PDU-{} config started'.format(pdunum))
             self.pduconfbu=self.pduconf
             self.pduconf=self.ignore
             self._root.update()
             command(self.comport,"tcpip -S enable -i 9.151.140.15{} -s 255.255.255.0 -g 0.0.0.0 -h pdu-{}".format(pdunum,pdunum), 'config')
             for self.butt in self.butts:
                 self.butt.config(state='active')
-            self.print_to_gui('PDU-{} config finished\n'.format(pdunum))
+            self.print_to_gui('PDU-{} config finished'.format(pdunum))
             self._root.after(2000, self.bindit)
     def bindit(self):
         for butt in self.butts:
