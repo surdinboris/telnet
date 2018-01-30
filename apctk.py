@@ -7,6 +7,7 @@ import tkinter.scrolledtext as tkst
 from tkinter import *
 import os
 import re
+import datetime
 from serial.serialutil import SerialException
 ######Config file parsing part##############
 def confparse():
@@ -131,14 +132,22 @@ def sendtel(tel,tcmd):
 ######GUI part##############
 class ApcGui():
     def __init__(self):
+
         self.comport,self.delay,self.syspatterns=confparse() #Configuration parsing - building menu items and testing delay
         self._root = Tk()
+
         self.syst=IntVar()  #Radiobutton default value
         self.syst.set(0)    #Radiobutton default value
         self.testrun = True #Test interrupt var
         self.logo = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)),"logo.gif"))
         self._root.title('LED test config/control tool')
+        #fixed width
         self._root.resizable(width=False,height=False)
+        #fixed fullscreen
+        # self._root.overrideredirect(True)
+        # self._root.overrideredirect(False)
+        # self._root.attributes('-fullscreen', True)
+
         #main window
         self._mainframe = tk.Frame(self._root)
         self._mainframe.grid(row=0, column=0, sticky=(E, W, N, S))
@@ -147,7 +156,7 @@ class ApcGui():
         self._logo.grid(row=0, padx=5, pady=5, column=0, sticky=(W,N))
         #config part
         self._configframe=tk.LabelFrame(self._mainframe, text='Config')
-        self._configframe.grid(row=1, padx=5, pady=5, column=0, sticky=(W,N))
+        self._configframe.grid(row=1, padx=15, pady=5, column=0, sticky=(W,N))
         self._configframe.columnconfigure(0, weight=1)
         self._configframe.rowconfigure(0, weight=1)
         #output part
@@ -159,13 +168,13 @@ class ApcGui():
         self._texbox.grid(row=0, column=1, sticky=(W,N))
         #config buttons
         self._pdu1conf_btn=tk.Button(self._configframe,text='PDU-1', command=lambda: self.pduconf(1))
-        self._pdu1conf_btn.grid(row=0,padx=3, pady=3, column=1, sticky=W)
+        self._pdu1conf_btn.grid(row=0,padx=15, pady=3, column=1, sticky=W)
+        self._pdu3conf_btn = tk.Button(self._configframe, text='PDU-3', command=lambda: self.pduconf(3))
+        self._pdu3conf_btn.grid(row=0, padx=15, pady=3, column=2, sticky=W)
         self._pdu2conf_btn=tk.Button(self._configframe,text='PDU-2', command=lambda: self.pduconf(2))
-        self._pdu2conf_btn.grid(row=0,padx=3, pady=3, column=2, sticky=W)
-        self._pdu3conf_btn=tk.Button(self._configframe,text='PDU-3', command=lambda: self.pduconf(3))
-        self._pdu3conf_btn.grid(row=1,padx=3, pady=3,  column=1, sticky=W)
+        self._pdu2conf_btn.grid(row=1,padx=15, pady=3, column=1, sticky=W)
         self._pdu4conf_btn=tk.Button(self._configframe,text='PDU-4', command=lambda: self.pduconf(4))
-        self._pdu4conf_btn.grid(row=1,padx=3, pady=3,  column=2, sticky=W)
+        self._pdu4conf_btn.grid(row=1,padx=15, pady=3,  column=2, sticky=W)
         #testing part
         self._testingframe=tk.LabelFrame(self._mainframe, text='Testing')
         self._testingframe.grid(row=2, padx=5, pady=5, column=0,sticky=(W,N))
@@ -174,10 +183,22 @@ class ApcGui():
         #radio buttons - system selection
         for self.ind,self.syspattern in enumerate(self.syspatterns):
             self._radiobutton = tk.Radiobutton(self._testingframe, text=self.syspattern, variable=self.syst, value=self.ind)
-            self._radiobutton.grid(row=self.ind,  padx=3, pady=3, column=0,sticky=(W,N))
-        #test buttons - start stop test
-        self._startbutton=tk.Button(self._testingframe, text='Start testing', command=self.starttest)
-        self._startbutton.grid(row=self.ind+1,  padx=3, pady=3, column=0,sticky=(W,N))
+            self._radiobutton.grid(row=self.ind,  padx=1, pady=1, column=0,sticky=(W,N))
+        #user entry
+        self._userframe=tk.LabelFrame(self._testingframe, text='Execution')
+        self._userframe.grid(row=self.ind+1,  padx=1, pady=1, column=0,sticky=(W,N))
+        self._sysseriallbl = tk.Label(self._userframe, text='System SN:',width=10)
+        self._sysseriallbl.grid(row=0 , padx=1, pady=1, column=0, sticky=(W, N))
+        self._sysserial = tk.Entry(self._userframe,width=12)
+        self._sysserial.grid(row=0, padx=1, pady=1, column=1, sticky=(W, N))
+        self._unamelbl = tk.Label(self._userframe, text='User name:',width=10)
+        self._unamelbl.grid(row=1, padx=1, pady=1, column=0, sticky=(W, N))
+        self._uname=tk.Entry(self._userframe,width=12)
+        self._uname.grid(row=1,  padx=1, pady=1, column=1,sticky=(W,N))
+
+        # test buttons - start stop test
+        self._startbutton=tk.Button(self._userframe, text='Start testing', command=self.starttest)
+        self._startbutton.grid(row=self.ind+3,  padx=3, pady=3, column=0,sticky=(W,N))
         self.print_to_gui("Please configure PDU's via Serial cable (RJ-11), choose proper system type and run testing procedure.")
         self._root.mainloop()
 
@@ -198,13 +219,48 @@ class ApcGui():
                     #sending command to each pdu
                     if self.toutl != '0':
                         if self.testrun == True:
-                            texecute(self.tpdu, self.toutl,'On')
-                            time.sleep(int(self.delay))
                             texecute(self.tpdu, self.toutl,'Off')
+                        else:
+                            break #stop button pressed
+                time.sleep(int(self.delay))
+                for self.tpdu, self.toutl in enumerate(self.pattern,1):
+                    #sending command to each pdu
+                    if self.toutl != '0':
+                        if self.testrun == True:
+                            texecute(self.tpdu, self.toutl,'On')
                         else:
                             break #stop button pressed
             else:
                 break #stop button pressed
+
+
+        self.allencloper('On')
+        self._startbutton.config(text='Start testing', command=self.starttest)
+        self.print_to_gui('Test is done.')
+
+    def startreartest(self): #one-by-one PSU for each enc with target delay
+        global testrun
+        self.testrun = True
+        self._startbutton.config(text='Stop testing', command=self.stoptest)
+        self.pattrns = (list(self.syspatterns.values())[self.syst.get()])  # get command scenarios for each pdu
+        self.print_to_gui('Started rear test of %s' % list(self.syspatterns)[self.syst.get()])
+        # Generating pattern per PDU for faster operation
+        self.pttrnlist = [(self.itm.split(',')) for self.itm in self.pattrns]
+        self.allencloper('Off')
+        for self.enc, self.pattern in enumerate(self.pttrnlist, 1):  # enclosures iteration
+            if self.testrun == True:
+                self.print_to_gui('Turning on enclosure %s' % self.enc)
+                for self.tpdu, self.toutl in enumerate(self.pattern, 1):
+                    # sending command to each pdu
+                    if self.toutl != '0':
+                        if self.testrun == True:
+                            texecute(self.tpdu, self.toutl, 'On')
+                            time.sleep(int(self.delay))
+                            texecute(self.tpdu, self.toutl, 'Off')
+                        else:
+                            break  # stop button pressed
+            else:
+                break  # stop button pressed
         self.allencloper('On')
         self._startbutton.config(text='Start testing', command=self.starttest)
         self.print_to_gui('Test is done.')
@@ -232,6 +288,7 @@ class ApcGui():
             command(self.comport,"tcpip -S enable -i 9.151.140.15{} -s 255.255.255.0 -g 0.0.0.0 -h pdu-{}".format(pdunum,pdunum), 'config')
             for self.butt in self.butts:
                 self.butt.config(state='active')
+            self.print_to_gui('PDU-{} config finished\n'.format(pdunum))
             self._root.after(2000, self.bindit)
     def bindit(self):
         for butt in self.butts:
