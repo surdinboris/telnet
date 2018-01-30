@@ -1,3 +1,4 @@
+#!/usr/bin/env python3.6
 import serial
 import time
 import telnetlib
@@ -9,12 +10,15 @@ import re
 from serial.serialutil import SerialException
 ######Config file parsing part##############
 def confparse():
-    conf=open(os.path.join(os.getcwd(),'apctk.conf'), 'r')
+    conf=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'apctk.conf'), 'r')
     syspatterns = {}
     delay=''
+    comport=''
     for row in conf.readlines():
         if re.search(r"^delay:(\d{1,})",row): #delay
-            delay = re.search(r".*delay:(\d{1,})",row)[1]
+            delay = re.search(r"^delay:(\d{1,})",row)[1]
+        elif re.search(r"^comport:(.*\d)", row):  # delay
+            comport = re.search(r"^comport:(.*\d)", row)[1] #comport
         else: #regular row
             confrow=re.search(r"^<(.*)>.*output groups:(.*)",row)
             if confrow:
@@ -22,12 +26,12 @@ def confparse():
                 groupstr=confrow[2].replace(" ", "").replace("\t", "")
                 groups=groupstr.rstrip(';').split(";")
                 syspatterns[sysname]=groups
-    return(delay,syspatterns)
+    return(comport,delay,syspatterns)
 
 ######Serial part##############
-def crconn():
+def crconn(comport):
     ser = serial.Serial(
-        'COM1',
+        comport,
         timeout=3,
         baudrate=9600,
         xonxoff=0,
@@ -44,7 +48,9 @@ def sendcom(ser,cmd):
 
 def handler(ser,comm): #login/accept handler
     promt=ser.readlines()
-    while len(promt) == 0: # activating new session
+    attcount=0
+    while len(promt) == 0 and attcount < 4: # activating new session
+        attcount+=1
         print('Trying to bring up serial connection...')
         conn_init(ser)
         promt=ser.readlines()
@@ -67,9 +73,9 @@ def conn_init(ser): #initiation procedure for console - need to send enter two  
     for x in range(3):
         ser.write(bytes("\r", encoding='ascii'))
 
-def command(comm,type):
+def command(comport,comm,type):
     print('Got command {} of type {}'.format(comm, type))
-    ser=crconn()
+    ser=crconn(comport)
     if type == 'config':
         handler(ser,[comm,'reboot','YES'])
     elif type == 'action':
@@ -80,8 +86,8 @@ def command(comm,type):
     ser.close()
     return True
 
-def getver(): #returns aos version
-    ser=crconn()
+def getver(comport): #returns aos version
+    ser=crconn(comport)
     handler(ser,['about'])
     ser.read_until(b"aos")
     ser.read_until(b"v")
@@ -96,6 +102,7 @@ def getver(): #returns aos version
 
 ######Telnet part##############
 def texecute(host, outl, act):  # patterns generation & execution. delay in sec, act - On, Off
+    print(host,outl,act)
     tel = telnetlib.Telnet('9.151.140.15{}'.format(host))
     tel.read_until(b'User Name')
     sendtel(tel,b'apc')
@@ -103,37 +110,49 @@ def texecute(host, outl, act):  # patterns generation & execution. delay in sec,
     sendtel(tel,b'apc')
     if type(outl) == str:
         sendtel(tel, ("ol%s %s" % (act,outl)).encode())
+        if tel.read_until(b'E000:'):
+            print('command passed')
+        else:
+            raise BaseException(ConnectionRefusedError)
     if type(outl) == list:
         out=','.join(outl)
         sendtel(tel, ("ol%s %s" % (act, out)).encode())
+        if tel.read_until(b'E000:'):
+            print('command list passed')
+        else:
+            raise BaseException(ConnectionRefusedError)
     sendtel(tel,b'exit')
 
 def sendtel(tel,tcmd):
     tel.write(tcmd)
-    time.sleep(1)
+    time.sleep(0.5)
     tel.write(b'\r')
 
 ######GUI part##############
 class ApcGui():
     def __init__(self):
-        self.delay,self.syspatterns=confparse() #Configuration parsing - building menu items and testing delay
+        self.comport,self.delay,self.syspatterns=confparse() #Configuration parsing - building menu items and testing delay
         self._root = Tk()
         self.syst=IntVar()  #Radiobutton default value
         self.syst.set(0)    #Radiobutton default value
         self.testrun = True #Test interrupt var
-        self._root.title('LED test config\control tool')
+        self.logo = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)),"logo.gif"))
+        self._root.title('LED test config/control tool')
         self._root.resizable(width=False,height=False)
         #main window
         self._mainframe = tk.Frame(self._root)
         self._mainframe.grid(row=0, column=0, sticky=(E, W, N, S))
+        #image
+        self._logo = tk.Label(self._mainframe,image=self.logo)
+        self._logo.grid(row=0, padx=5, pady=5, column=0, sticky=(W,N))
         #config part
         self._configframe=tk.LabelFrame(self._mainframe, text='Config')
-        self._configframe.grid(row=0, padx=5, pady=5, column=0, sticky=(W,N))
+        self._configframe.grid(row=1, padx=5, pady=5, column=0, sticky=(W,N))
         self._configframe.columnconfigure(0, weight=1)
         self._configframe.rowconfigure(0, weight=1)
         #output part
         self._textboxframe=tk.LabelFrame(self._mainframe, text='Work log')
-        self._textboxframe.grid(row=0,padx=5, pady=5, column=1, rowspan=2, sticky=(W,N))
+        self._textboxframe.grid(row=0,padx=5, pady=5, column=1, rowspan=3, sticky=(W,N))
         self._textboxframe.columnconfigure(0, weight=1)
         self._textboxframe.rowconfigure(0, weight=1)
         self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=45, height=25, state='disabled')
@@ -149,7 +168,7 @@ class ApcGui():
         self._pdu4conf_btn.grid(row=1,padx=3, pady=3,  column=2, sticky=W)
         #testing part
         self._testingframe=tk.LabelFrame(self._mainframe, text='Testing')
-        self._testingframe.grid(row=1, padx=5, pady=5, column=0,sticky=(W,N))
+        self._testingframe.grid(row=2, padx=5, pady=5, column=0,sticky=(W,N))
         self._testingframe.columnconfigure(0, weight=1)
         self._testingframe.rowconfigure(0, weight=1)
         #radio buttons - system selection
@@ -181,11 +200,11 @@ class ApcGui():
                         if self.testrun == True:
                             texecute(self.tpdu, self.toutl,'On')
                             time.sleep(int(self.delay))
-                            texecute(self.tpdu, self.toutl, 'Off')
+                            texecute(self.tpdu, self.toutl,'Off')
                         else:
-                            break
+                            break #stop button pressed
             else:
-                break
+                break #stop button pressed
         self.allencloper('On')
         self._startbutton.config(text='Start testing', command=self.starttest)
         self.print_to_gui('Test is done.')
@@ -204,15 +223,15 @@ class ApcGui():
         self._root.after(2000, self._startbutton.config(text='Start testing', command=self.starttest))
     def pduconf(self,pdunum):
             self.butts = [self._pdu1conf_btn, self._pdu2conf_btn, self._pdu3conf_btn, self._pdu4conf_btn]
-            for butt in self.butts:
-                butt.config(state='disabled')
+            for self.butt in self.butts:
+                self.butt.config(state='disabled')
             self.print_to_gui('PDU-{} config started\n'.format(pdunum))
             self.pduconfbu=self.pduconf
             self.pduconf=self.ignore
             self._root.update()
-            command("tcpip -S enable -i 9.151.140.15{} -s 255.255.255.0 -g 0.0.0.0 -h pdu-{}".format(pdunum,pdunum), 'config')
-            for butt in self.butts:
-                butt.config(state='active')
+            command(self.comport,"tcpip -S enable -i 9.151.140.15{} -s 255.255.255.0 -g 0.0.0.0 -h pdu-{}".format(pdunum,pdunum), 'config')
+            for self.butt in self.butts:
+                self.butt.config(state='active')
             self._root.after(2000, self.bindit)
     def bindit(self):
         for butt in self.butts:
