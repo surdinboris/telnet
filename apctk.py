@@ -341,6 +341,8 @@ class ApcGui():
     def ignore(self,*args,**kwargs):
         return 'break'
     def logging(self, txtstr ):
+        #creating logfile
+
         pass
     def print_to_gui(self, txtstr):
         self._texbox.config(state='normal')
