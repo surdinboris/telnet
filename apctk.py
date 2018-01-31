@@ -153,16 +153,18 @@ class ApcGui():
         self.syst=IntVar()  #Radiobutton default value
         self.syst.set(0)    #Radiobutton default value
         self.testrun = True #Test interrupt var
+        #images loading
         self.logo = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)),"logo.gif"))
-        self.donut = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)), "donut.gif"))
-        self._root.title('LED test config/control tool')
+        self.encnormfr = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)), "encnormfr.gif"))
+        self.encopenedfr = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)), "encopenedfr.gif"))
+        #geometry
         #fixed width
+        self._root.title('LED test config/control tool')
         self._root.resizable(width=False,height=False)
         #fixed fullscreen
         # self._root.overrideredirect(True)
         # self._root.overrideredirect(False)
         # self._root.attributes('-fullscreen', True)
-
         #main window
         self._mainframe = tk.Frame(self._root)
         self._mainframe.grid(row=0, column=0, sticky=(E, W, N, S))
@@ -210,7 +212,6 @@ class ApcGui():
         self._unamelbl.grid(row=1, padx=1, pady=1, column=0, sticky=(W, N))
         self._uname=tk.Entry(self._userframe,width=12)
         self._uname.grid(row=1,  padx=1, pady=1, column=1,sticky=(W,N))
-
         # test buttons - start stop test
         self._startbutton=tk.Button(self._userframe, text='Start testing', command=self.starttest)
         self._startbutton.grid(row=self.ind+3,  padx=3, pady=3, column=0,sticky=(W,N))
@@ -237,24 +238,9 @@ class ApcGui():
                             texecute(self.tpdu, self.toutl,'On')
                         else:
                             break #stop button pressed
-
-                self._top = Toplevel()
-                self._top.title("Please check")
-                self._top.resizable(width=False, height=False)
-                self._messageframe = tk.LabelFrame(self._top, text='Picture')
-                self._messageframe.grid(row=0, column=0, sticky=(E, W, N, S))
-                self._msg = Message(self._messageframe, text='Please check')
-                self._msg.grid(row=0, padx=5, pady=5, column=0, sticky=(W, N))
-                self._frontmboxlogo = tk.Label(self._msg, image=self.donut)
-                self._frontmboxlogo.grid(row=0, padx=5, pady=5, column=0, sticky=(W, N))
-                self._buttonsframe = tk.LabelFrame(self._top)
-                self._buttonsframe.grid(row=1, column=0, sticky=(E, W, N, S))
-                self._tpok = Button(self._buttonsframe, text="Ok", command=self._top.destroy)
-                self._tpok.grid(row=1, padx=5, pady=5, column=0, sticky=(W, N))
-                self._tpcancel = Button(self._buttonsframe, text="Abort testing", command=self.combine_funcs(self.stoptest,self._top.destroy))
-                self._tpcancel.grid(row=1, padx=5, pady=5, column=1, sticky=(W, N))
-                self._top.grab_set()
-                self._root.wait_window(self._top)
+                self.popupgen(self.enc,'front panel of enclosure',self.encnormfr)
+                if self.testrun == True: #checking for first abort
+                    self.popupgen(self.enc, 'front panel of enclosure', self.encopenedfr)
                 #time.sleep(int(self.delay)) #pdu iteration
                 for self.tpdu, self.toutl in enumerate(self.pattern,1): #pdu iteration
                     #sending command to each pdu
@@ -265,8 +251,6 @@ class ApcGui():
                             break #stop button pressed
             else:
                 break #stop button pressed
-
-
         self.allencloper('On')
         self._startbutton.config(text='Start testing', command=self.starttest)
         self.print_to_gui('Test is done.')
@@ -289,7 +273,7 @@ class ApcGui():
                     if self.toutl != '0':
                         if self.testrun == True:
                             texecute(self.tpdu, self.toutl, 'On')
-                            time.sleep(int(self.delay))
+                            self.popupgen(self.enc, 'rear enclosure test')
                             texecute(self.tpdu, self.toutl, 'Off')
                         else:
                             break  # stop button pressed
@@ -298,6 +282,24 @@ class ApcGui():
         self.allencloper('On')
         self._startbutton.config(text='Start testing', command=self.starttest)
         self.print_to_gui('Test is done.')
+
+    def popupgen(self, testype, encnum, img):
+        self._top = Toplevel()
+        self._top.title("Please check {0} {1}".format(encnum,testype))
+        self._top.resizable(width=False, height=False)
+        self._messageframe = tk.LabelFrame(self._top, text='Picture')
+        self._messageframe.grid(row=0, column=0, sticky=(E, W, N, S))
+        self._frontmboxlogo = tk.Label(self._messageframe, image=img)
+        self._frontmboxlogo.grid(row=0, padx=5, pady=5, column=0, sticky=(W, N))
+        self._buttonsframe = tk.LabelFrame(self._top)
+        self._buttonsframe.grid(row=1, column=0, sticky=(E, W, N, S))
+        self._tpok = Button(self._buttonsframe, text="Ok", command=self._top.destroy)
+        self._tpok.grid(row=1, padx=5, pady=5, column=0, sticky=(W, N))
+        self._tpcancel = Button(self._buttonsframe, text="Abort testing",
+                                command=self.combine_funcs(self.stoptest, self._top.destroy))
+        self._tpcancel.grid(row=1, padx=5, pady=5, column=1, sticky=(W, N))
+        self._top.grab_set()
+        self._root.wait_window(self._top)
 
     def allencloper(self,comm):   #serial enclosure outlet operation at beginning and ending test
         self.print_to_gui(
@@ -338,6 +340,8 @@ class ApcGui():
         self.pduconf=self.pduconfbu
     def ignore(self,*args,**kwargs):
         return 'break'
+    def logging(self, txtstr ):
+        pass
     def print_to_gui(self, txtstr):
         self._texbox.config(state='normal')
         self._texbox.insert('end', '%s\n' %txtstr)
