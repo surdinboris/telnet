@@ -220,9 +220,12 @@ class ApcGui():
 
     def starttest(self):
         global testrun
+        #if self._sysserial.get():
+
         self.testrun = True
         self._startbutton.config(text='Stop testing', command=self.stoptest)
         self.pattrns=(list(self.syspatterns.values())[self.syst.get()]) #get command scenarios for each pdu
+        self.texboxclear()
         self.print_to_gui('Started test of %s' % list(self.syspatterns)[self.syst.get()])
         #Generating pattern per PDU for faster operation
         self.pttrnlist=[(self.itm.split(',')) for self.itm in self.pattrns]
@@ -253,7 +256,8 @@ class ApcGui():
                 break #stop button pressed
         self.allencloper('On')
         self._startbutton.config(text='Start testing', command=self.starttest)
-        self.print_to_gui('Test is done.')
+        self.print_to_gui('Test is ended.')
+        self.logging(self._texbox.get("2.0",'end-1c'))
 
 
     def startreartest(self): #one-by-one PSU for each enc with target delay
@@ -342,12 +346,18 @@ class ApcGui():
         return 'break'
     def logging(self, txtstr ):
         #creating logfile
-
+        print(txtstr)
+        #conf = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'apctk.conf'), 'r')
         pass
     def print_to_gui(self, txtstr):
         self._texbox.config(state='normal')
         self._texbox.insert('end', '%s\n' %txtstr)
         self._texbox.config(state="disabled")
-        self._texbox.see("end")
+        self._texbox.see('end')
+        self._root.update()
+    def texboxclear(self):
+        self._texbox.config(state='normal')
+        self._texbox.delete('1.0', END)
+        self._texbox.config(state="disabled")
         self._root.update()
 gui=ApcGui()
