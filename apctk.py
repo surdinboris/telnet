@@ -133,20 +133,29 @@ def sendtel(tel,tcmd):
     time.sleep(0.5)
     tel.write(b'\r')
 
+
+
+
 ######GUI part##############
 class ApcGui():
     def __init__(self):
-
-        self.comport,self.delay,self.syspatterns=confparse() #Configuration parsing - building menu items and testing delay
+        #messages
+        self.popupmsgs={'encfront1':"""Check that the first 2 LEDs - Power(green) and service(amber, below) of the enclosure are turned ON.
+""",'encfront2':"""After 10 seconds sinse powering on, the service(amber) led should turn OFF (in other case enclosure is malfunctioned).""",'encfront3':"""Pull out and open an enclosure 
+cover doors and make sure that LED #5 (Cover open) turns ON.
+- Close the enclosure cover doors, and make sure that LED #5 turns OFF.
+- Return the enclosure back to its position."""}
+        # Configuration parsing - building menu items and testing delay
+        self.comport,self.delay,self.syspatterns=confparse()
         self._root = Tk()
-
         self.syst=IntVar()  #Radiobutton default value
         self.syst.set(0)    #Radiobutton default value
         self.testrun = True #Test interrupt var
         #images loading
         self.logo = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)),"logo.gif"))
-        self.encnormfr = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)), "encnormfr.gif"))
-        self.encopenedfr = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)), "encopenedfr.gif"))
+        self.encnormfr1 = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)), "encnormfr1.gif"), format = 'gif')
+        self.encnormfr2 = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)), "encnormfr2.gif"), format = 'gif')
+        self.encopenedfr = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)), "encopenedfr.gif"), format = 'gif')
         #geometry
         #fixed width
         self._root.title('LED test config/control tool')
@@ -210,9 +219,10 @@ class ApcGui():
 
     def starttest(self):
         global testrun
+        global popupmsgs
         self.checkfields=[self._sysserial.get(),self._uname.get()]
         if not all(x for x in self.checkfields):
-            self.popupgen('1', 'Please fill username and serial',img=None)
+            self.popupgen('Please fill username and serial',img=None)
         else:
             self.testrun = True
             self._startbutton.config(text='Stop testing', command=self.stoptest)
@@ -233,10 +243,12 @@ class ApcGui():
                                 texecute(self.tpdu, self.toutl,'On')
                             else:
                                 break #stop button pressed
-                    self.popupgen(self.enc,'front panel of enclosure',self.encnormfr)
-                    if self.testrun == True: #checking for first abort
-                        self.popupgen(self.enc, 'front panel of enclosure', self.encopenedfr)
-                    #time.sleep(int(self.delay)) #pdu iteration
+                    self.popupgen(self.popupmsgs['encfront1'],self.enc, img=self.encnormfr1,)
+                    self.popupgen(self.popupmsgs['encfront2'],self.enc, img=self.encnormfr2)
+                    self.popupgen(self.popupmsgs['encfront3'],self.enc, img=self.encopenedfr)
+                    # if self.testrun == True: #checking for first abort
+                    #     self.popupgen(self.popupmsgs['encfront'], img=self.encopenedfr1)
+                    #time.sleep(int(self.delay)) #auto mode with delay
                     for self.tpdu, self.toutl in enumerate(self.pattern,1): #pdu iteration
                         #sending command to each pdu
                         if self.toutl != '0':
@@ -269,7 +281,7 @@ class ApcGui():
                     if self.toutl != '0':
                         if self.testrun == True:
                             texecute(self.tpdu, self.toutl, 'On')
-                            self.popupgen(self.enc, 'rear enclosure test')
+                            self.popupgen('rear enclosure test', img=None)
                             texecute(self.tpdu, self.toutl, 'Off')
                         else:
                             break  # stop button pressed
@@ -279,22 +291,36 @@ class ApcGui():
         self._startbutton.config(text='Start testing', command=self.starttest)
         self.print_to_gui('Test is done.')
 
-    def popupgen(self, testype, encnum, img):
-        self._top = Toplevel()
-        self._top.title("Please check {0} {1}".format(encnum,testype))
-        self._top.resizable(width=False, height=False)
-        self._messageframe = tk.LabelFrame(self._top, text='Picture')
-        self._messageframe.grid(row=0, column=0, sticky=(E, W, N, S))
-        self._frontmboxlogo = tk.Label(self._messageframe, image=img)
-        self._frontmboxlogo.grid(row=0, padx=5, pady=5, column=0, sticky=(W, N))
-        self._buttonsframe = tk.LabelFrame(self._top)
-        self._buttonsframe.grid(row=1, column=0, sticky=(E, W, N, S))
-        self._tpok = Button(self._buttonsframe, text="Ok", command=self._top.destroy)
-        self._tpok.grid(row=1, padx=5, pady=5, column=0, sticky=(W, N))
-        self._tpcancel = Button(self._buttonsframe, text="Abort testing", command=self.combine_funcs(self.stoptest, self._top.destroy))
-        self._tpcancel.grid(row=1, padx=5, pady=5, column=1, sticky=(W, N))
-        self._top.grab_set()
-        self._root.wait_window(self._top)
+    def popupgen(self, message, encnum=None, img=None):
+        if self.testrun == True:
+            self._top = Toplevel()
+            self._top.title(message)
+            self._top.resizable(width=False, height=False)
+            self._messagetext=StringVar()
+            if encnum:
+                self._messagetext.set('Enclosure: {0} \n {1}'.format(encnum, message))
+            else:
+                self._messagetext.set(message)
+            self._poptexbox = Message(self._top, textvariable=self._messagetext, width=1000, anchor=W, font=30)
+            self._poptexbox.pack(fill=BOTH, pady=5)
+            if img:
+                self._frontmboxlgfr = tk.LabelFrame(self._top, text='')
+                self._frontmboxlgfr.pack(padx=1, pady=1)
+                self._frontmboxlogo = tk.Label(self._frontmboxlgfr, image=img)
+                self._frontmboxlogo.pack(padx=5,pady=5)
+
+            self._tpok = Button(self._top, text="Ok", command=self._top.destroy)
+            self._tpok.pack(side=LEFT,padx=5,pady=5)
+            self._tpcancel = Button(self._top, text="Abort testing", command=self.combine_funcs(self.stoptest, self._top.destroy))
+            self._tpcancel.pack(side=LEFT,padx=5, pady=5)
+            self._top.grab_set()
+            self._root.wait_window(self._top)
+
+    def update(self,img,ind): #update image in frame of popup dialog
+        frame = img[ind]
+        self._frontmboxlogo.configure(image=frame)
+
+        #root.after(100, self.update, root,img,ind)
 
     def allencloper(self,comm):   #serial enclosure outlet operation at beginning and ending test
         self.print_to_gui(
@@ -334,10 +360,8 @@ class ApcGui():
         self.pduconf=self.pduconfbu
     def ignore(self,*args,**kwargs):
         return 'break'
-    def logging(self, txtstr, sysname ):
-        #creating logfile
-        print(sysname)
-        self.syslog = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '{0}_{1}'.format(sysname, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))+'.log'), 'w')
+    def logging(self, txtstr, sysname ): #creating logfile
+        self.syslog = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'logs', '{0}_{1}'.format(sysname, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))+'.log'), 'w')
         self.syslog.writelines(txtstr)
         self.syslog.close()
 
