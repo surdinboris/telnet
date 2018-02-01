@@ -140,11 +140,17 @@ def sendtel(tel,tcmd):
 class ApcGui():
     def __init__(self):
         #messages
-        self.popupmsgs={'encfront1':"""Check that the first 2 LEDs - Power(green) and service(amber, below) of the enclosure are turned ON.
-""",'encfront2':"""After 10 seconds sinse powering on, the service(amber) led should turn OFF (in other case enclosure is malfunctioned).""",'encfront3':"""Pull out and open an enclosure 
-cover doors and make sure that LED #5 (Cover open) turns ON.
-- Close the enclosure cover doors, and make sure that LED #5 turns OFF.
-- Return the enclosure back to its position."""}
+        self.popupmsgs={
+                        'encfront1':"""Check that the first 2 LEDs - Power(green) and service(amber, below) of the 
+enclosure are turned ON.""",
+                        'encfront2':"""After 10 seconds sinse powering on, the service(amber) led should turn OFF 
+(in other case enclosure is malfunctioned).""",
+                        'encfront3':"""
+-Pull out and open an enclosure cover doors and make sure that LED #5 (Cover open) turns ON.
+-Close the enclosure cover doors, and make sure that LED #5 turns OFF.
+-Return the enclosure back to its position."""
+                        }
+
         # Configuration parsing - building menu items and testing delay
         self.comport,self.delay,self.syspatterns=confparse()
         self._root = Tk()
