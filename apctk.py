@@ -133,16 +133,6 @@ def sendtel(tel,tcmd):
     time.sleep(0.5)
     tel.write(b'\r')
 
-# class ThreadedSleep(threading.Thread):
-#     def __init__(self, queue):
-#         print('ThreadedSleep ')
-#         threading.Thread.__init__(self)
-#         self.queue = queue
-#         #self.delay=delay
-#     def run(self):
-#         time.sleep(50)  # Simulate long running process
-#         self.queue.put("Task finished")
-
 ######GUI part##############
 class ApcGui():
     def __init__(self):
@@ -220,44 +210,46 @@ class ApcGui():
 
     def starttest(self):
         global testrun
-        #if self._sysserial.get():
-
-        self.testrun = True
-        self._startbutton.config(text='Stop testing', command=self.stoptest)
-        self.pattrns=(list(self.syspatterns.values())[self.syst.get()]) #get command scenarios for each pdu
-        self.texboxclear()
-        self.print_to_gui('Started test of %s' % list(self.syspatterns)[self.syst.get()])
-        #Generating pattern per PDU for faster operation
-        self.pttrnlist=[(self.itm.split(',')) for self.itm in self.pattrns]
-        self.allencloper('Off')
-    #Testing procedure - every enclosure will be turned on and off
-        for self.enc,self.pattern in enumerate(self.pttrnlist,1): #enclosures iteration
-            if self.testrun == True:
-                self.print_to_gui('Turning on enclosure %s' %self.enc)
-                for self.tpdu, self.toutl in enumerate(self.pattern,1): #pdu iteration
-                    #sending command to each pdu
-                    if self.toutl != '0':
-                        if self.testrun == True:
-                            texecute(self.tpdu, self.toutl,'On')
-                        else:
-                            break #stop button pressed
-                self.popupgen(self.enc,'front panel of enclosure',self.encnormfr)
-                if self.testrun == True: #checking for first abort
-                    self.popupgen(self.enc, 'front panel of enclosure', self.encopenedfr)
-                #time.sleep(int(self.delay)) #pdu iteration
-                for self.tpdu, self.toutl in enumerate(self.pattern,1): #pdu iteration
-                    #sending command to each pdu
-                    if self.toutl != '0':
-                        if self.testrun == True:
-                            texecute(self.tpdu, self.toutl,'Off')
-                        else:
-                            break #stop button pressed
-            else:
-                break #stop button pressed
-        self.allencloper('On')
-        self._startbutton.config(text='Start testing', command=self.starttest)
-        self.print_to_gui('Test is ended.')
-        self.logging(self._texbox.get("2.0",'end-1c'))
+        self.checkfields=[self._sysserial.get(),self._uname.get()]
+        if not all(x for x in self.checkfields):
+            self.popupgen('1', 'Please fill username and serial',img=None)
+        else:
+            self.testrun = True
+            self._startbutton.config(text='Stop testing', command=self.stoptest)
+            self.pattrns=(list(self.syspatterns.values())[self.syst.get()]) #get command scenarios for each pdu
+            self.texboxclear()
+            self.print_to_gui('Started test of %s' % list(self.syspatterns)[self.syst.get()])
+            #Generating pattern per PDU for faster operation
+            self.pttrnlist=[(self.itm.split(',')) for self.itm in self.pattrns]
+            self.allencloper('Off')
+        #Testing procedure - every enclosure will be turned on and off
+            for self.enc,self.pattern in enumerate(self.pttrnlist,1): #enclosures iteration
+                if self.testrun == True:
+                    self.print_to_gui('Turning on enclosure %s' %self.enc)
+                    for self.tpdu, self.toutl in enumerate(self.pattern,1): #pdu iteration
+                        #sending command to each pdu
+                        if self.toutl != '0':
+                            if self.testrun == True:
+                                texecute(self.tpdu, self.toutl,'On')
+                            else:
+                                break #stop button pressed
+                    self.popupgen(self.enc,'front panel of enclosure',self.encnormfr)
+                    if self.testrun == True: #checking for first abort
+                        self.popupgen(self.enc, 'front panel of enclosure', self.encopenedfr)
+                    #time.sleep(int(self.delay)) #pdu iteration
+                    for self.tpdu, self.toutl in enumerate(self.pattern,1): #pdu iteration
+                        #sending command to each pdu
+                        if self.toutl != '0':
+                            if self.testrun == True:
+                                texecute(self.tpdu, self.toutl,'Off')
+                            else:
+                                break #stop button pressed
+                else:
+                    break #stop button pressed
+            self.allencloper('On')
+            self._startbutton.config(text='Start testing', command=self.starttest)
+            self.print_to_gui('Test is ended.')
+            self.logging(self._texbox.get("2.0",'end'),self._sysserial.get())
 
 
     def startreartest(self): #one-by-one PSU for each enc with target delay
@@ -299,8 +291,7 @@ class ApcGui():
         self._buttonsframe.grid(row=1, column=0, sticky=(E, W, N, S))
         self._tpok = Button(self._buttonsframe, text="Ok", command=self._top.destroy)
         self._tpok.grid(row=1, padx=5, pady=5, column=0, sticky=(W, N))
-        self._tpcancel = Button(self._buttonsframe, text="Abort testing",
-                                command=self.combine_funcs(self.stoptest, self._top.destroy))
+        self._tpcancel = Button(self._buttonsframe, text="Abort testing", command=self.combine_funcs(self.stoptest, self._top.destroy))
         self._tpcancel.grid(row=1, padx=5, pady=5, column=1, sticky=(W, N))
         self._top.grab_set()
         self._root.wait_window(self._top)
@@ -314,11 +305,10 @@ class ApcGui():
             if len(self.outl) > 0:
                 texecute(self.pdu, self.outl,comm)
 
-    def combine_funcs(self,*funcs):
+    def combine_funcs(self,*funcs): #combining functions for one button execution binding
         def combined_func(*args, **kwargs):
             for f in funcs:
                 f(*args, **kwargs)
-
         return combined_func
 
     def stoptest(self):
@@ -344,11 +334,13 @@ class ApcGui():
         self.pduconf=self.pduconfbu
     def ignore(self,*args,**kwargs):
         return 'break'
-    def logging(self, txtstr ):
+    def logging(self, txtstr, sysname ):
         #creating logfile
-        print(txtstr)
-        #conf = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'apctk.conf'), 'r')
-        pass
+        print(sysname)
+        self.syslog = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '{0}_{1}'.format(sysname, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))+'.log'), 'w')
+        self.syslog.writelines(txtstr)
+        self.syslog.close()
+
     def print_to_gui(self, txtstr):
         self._texbox.config(state='normal')
         self._texbox.insert('end', '%s\n' %txtstr)
