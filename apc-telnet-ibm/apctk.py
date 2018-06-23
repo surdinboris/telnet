@@ -138,7 +138,6 @@ def sendtel(tel,tcmd):
 ######GUI part##############
 class ApcGui():
     def __init__(self):
-
         # Configuration parsing - building menu items and testing delay
         self.comport,self.delay,self.syspatterns=confparse()
         self._root = Tk()
@@ -161,30 +160,17 @@ class ApcGui():
         #image
         self._logo = tk.Label(self._mainframe,image=self.logo)
         self._logo.grid(row=0, padx=5, pady=5, column=0, sticky=(W,N))
-        #config part
-        self._configframe=tk.LabelFrame(self._mainframe, text='Config')
-        self._configframe.grid(row=1, padx=15, pady=5, column=0, sticky=(W,N))
-        self._configframe.columnconfigure(0, weight=1)
-        self._configframe.rowconfigure(0, weight=1)
         #output part
         self._textboxframe=tk.LabelFrame(self._mainframe, text='Work log')
         self._textboxframe.grid(row=0,padx=5, pady=5, column=1, rowspan=3, sticky=(W,N))
         self._textboxframe.columnconfigure(0, weight=1)
         self._textboxframe.rowconfigure(0, weight=1)
-        self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=45, height=25, state='disabled')
+        self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=35, height=20, state='disabled')
         self._texbox.grid(row=0, column=1, sticky=(W,N))
-        #config buttons
-        # self._pdu1conf_btn=tk.Button(self._configframe,text='PDU-1', command=lambda: self.pduconf(1))
-        # self._pdu1conf_btn.grid(row=0,padx=15, pady=3, column=1, sticky=W)
-        # self._pdu3conf_btn = tk.Button(self._configframe, text='PDU-3', command=lambda: self.pduconf(3))
-        # self._pdu3conf_btn.grid(row=0, padx=15, pady=3, column=2, sticky=W)
-        # self._pdu2conf_btn=tk.Button(self._configframe,text='PDU-2', command=lambda: self.pduconf(2))
-        # self._pdu2conf_btn.grid(row=1,padx=15, pady=3, column=1, sticky=W)
-        # self._pdu4conf_btn=tk.Button(self._configframe,text='PDU-4', command=lambda: self.pduconf(4))
-        # self._pdu4conf_btn.grid(row=1,padx=15, pady=3,  column=2, sticky=W)
+
         #testing part
         self._testingframe=tk.LabelFrame(self._mainframe, text='Testing')
-        self._testingframe.grid(row=2, padx=5, pady=5, column=0,sticky=(W,N))
+        self._testingframe.grid(row=1, padx=5, pady=5, column=0,sticky=(W,N))
         self._testingframe.columnconfigure(0, weight=1)
         self._testingframe.rowconfigure(0, weight=1)
         #radio buttons - system selection
@@ -205,8 +191,8 @@ class ApcGui():
         # self.print_to_gui("Please configure PDU's via Serial cable (RJ-11), choose proper system type and run testing procedure.")
         self._root.mainloop()
     def disbutt(self,opt):
-        for bu in self._radiobuttons:
-            bu['state']=opt
+        for self.bu in self._radiobuttons:
+            self.bu['state'] = opt
     def turnOn(self,):
         # print(self.curbuttnames)
         self.testrun = True
@@ -219,14 +205,14 @@ class ApcGui():
         self.pttrnlist = self.pattrns[0].split(',')
         for self.toutl in self.pttrnlist:  #outlets iteration
             #sending command to each pdu
-            if self.toutl != '0':
+            if self.toutl and self.toutl != '0':
                 texecute(4, self.toutl,'On') #need to implement command generation accordingly to a pressed button +update GUI field
         #updating menu entries
 
-        for bu in self._radiobuttons:
-            self.filteredButtName = re.search(r'(\<.*\>)', bu["text"])
+        for self.but in self._radiobuttons:
+            self.filteredButtName = re.search(r'(\<.*\>)', self.but["text"])
             if self.filteredButtName.group(0) == list(self.syspatterns)[self.syst.get()]:
-                bu.config(text=list(self.syspatterns)[self.syst.get()] + " is On")
+                self.but.config(text=list(self.syspatterns)[self.syst.get()] + " is On")
                 self._root.update()
         self.disbutt('normal')
 
@@ -242,13 +228,13 @@ class ApcGui():
         self.pttrnlist=self.pattrns[0].split(',')
         for self.toutl in self.pttrnlist: #outlets iteration
             #sending command to each pdu
-            if self.toutl != '0':
+            if self.toutl and self.toutl != '0':
                 texecute(4, self.toutl,'Off') #need to implement command generation accordingly to a pressed button +update GUI field
 
-        for bu in self._radiobuttons:
-            self.filteredButtName = re.search(r'(\<.*\>)', bu["text"])
+        for self.but in self._radiobuttons:
+            self.filteredButtName = re.search(r'(\<.*\>)', self.but["text"])
             if self.filteredButtName.group(0) == list(self.syspatterns)[self.syst.get()]:
-                bu.config(text=list(self.syspatterns)[self.syst.get()] + " is Off")
+                self.but.config(text=list(self.syspatterns)[self.syst.get()] + " is Off")
                 self._root.update()
         self.disbutt('normal')
 
