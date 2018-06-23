@@ -139,6 +139,7 @@ def sendtel(tel,tcmd):
 ######GUI part##############
 class ApcGui():
     def __init__(self):
+
         #messages
         self.popupmsgs={
                         'encfront1':"""Check that the first 2 LEDs - Power(green) and service(amber, below) of the 
@@ -152,11 +153,13 @@ enclosure are turned ON.""",
                         }
 
         # Configuration parsing - building menu items and testing delay
-        self.comport,self.delay,self.syspatterns=confparse()
+
+        self.comport,self.delay,self.syspatterns=confparse() #Configuration parsing - building menu items and testing delay
         self._root = Tk()
         self.syst=IntVar()  #Radiobutton default value
         self.syst.set(0)    #Radiobutton default value
         self.testrun = True #Test interrupt var
+
         #images loading
         self.logo = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)),"logo.gif"))
         self.encnormfr1 = tk.PhotoImage(file=os.path.join(os.path.dirname(os.path.abspath(__file__)), "encnormfr1.gif"), format = 'gif')
@@ -165,6 +168,7 @@ enclosure are turned ON.""",
         #geometry
         #fixed width
         self._root.title('LED test config/control tool')
+        self.logo = tk.PhotoImage(file="logo.gif")
         self._root.resizable(width=False,height=False)
         #fixed fullscreen
         # self._root.overrideredirect(True)
@@ -178,7 +182,9 @@ enclosure are turned ON.""",
         self._logo.grid(row=0, padx=5, pady=5, column=0, sticky=(W,N))
         #config part
         self._configframe=tk.LabelFrame(self._mainframe, text='Config')
+
         self._configframe.grid(row=1, padx=15, pady=5, column=0, sticky=(W,N))
+
         self._configframe.columnconfigure(0, weight=1)
         self._configframe.rowconfigure(0, weight=1)
         #output part
@@ -293,6 +299,7 @@ enclosure are turned ON.""",
                             break  # stop button pressed
             else:
                 break  # stop button pressed
+
         self.allencloper('On')
         self._startbutton.config(text='Start testing', command=self.starttest)
         self.print_to_gui('Test is done.')
@@ -358,8 +365,11 @@ enclosure are turned ON.""",
             command(self.comport,"tcpip -S enable -i 9.151.140.15{} -s 255.255.255.0 -g 0.0.0.0 -h pdu-{}".format(pdunum,pdunum), 'config')
             for self.butt in self.butts:
                 self.butt.config(state='active')
+
             self.print_to_gui('PDU-{} config finished'.format(pdunum))
+
             self._root.after(2000, self.bindit)
+            self.print_to_gui('PDU-{} config ended'.format(pdunum))
     def bindit(self):
         for butt in self.butts:
             butt.config(state='active')
