@@ -200,7 +200,8 @@ class ApcGui():
         # self._startbutton.config(text='Stop testing', command=self.stoptest)
         self.pattrns=(list(self.syspatterns.values())[self.syst.get()]) #get command scenarios for each pdu
         # self.texboxclear()
-        self.print_to_gui('%s is Turned On' % list(self.syspatterns)[self.syst.get()])
+        self.print_to_gui('{} {} turned On'.format(datetime.datetime.now().strftime('%H:%M:%S')
+                                                        ,list(self.syspatterns)[self.syst.get()]))
         #Generating pattern per PDU for faster operation
         self.pttrnlist = self.pattrns[0].split(',')
         for self.toutl in self.pttrnlist:  #outlets iteration
@@ -223,7 +224,8 @@ class ApcGui():
         # self._startbutton.config(text='Stop testing', command=self.stoptest)
         self.pattrns=(list(self.syspatterns.values())[self.syst.get()]) #get command scenarios for each pdu
         # self.texboxclear()
-        self.print_to_gui('%s is Turned Off' % list(self.syspatterns)[self.syst.get()])
+        self.print_to_gui('{} {} turned Off'.format(datetime.datetime.now().strftime('%H:%M:%S')
+                                                        ,list(self.syspatterns)[self.syst.get()]))
         #Generating pattern per PDU for faster operation
         self.pttrnlist=self.pattrns[0].split(',')
         for self.toutl in self.pttrnlist: #outlets iteration
