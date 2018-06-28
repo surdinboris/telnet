@@ -19,11 +19,15 @@ def confparse():
     syspatterns = {}
     delay=''
     comport=''
+    ipaddr=''
     for row in conf.readlines():
         if re.search(r"^delay:(\d{1,})",row): #delay
             delay = re.search(r"^delay:(\d{1,})",row)[1]
         elif re.search(r"^comport:(.*\d)", row):  # delay
             comport = re.search(r"^comport:(.*\d)", row)[1] #comport
+        elif re.search(r"^ipaddr:(.*\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", row):
+            ipaddr =(re.search(r"^ipaddr:(.*\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", row)[1])
+
         else: #regular row
             confrow=re.search(r"^<(.*)>.*output groups:(.*)",row)
             if confrow:
@@ -32,7 +36,7 @@ def confparse():
                 groups=groupstr.rstrip(';').split(";")
                 syspatterns[sysname]=groups
 
-    return(comport,delay,syspatterns)
+    return(comport,delay,syspatterns,ipaddr)
 
 ######Serial part##############
 def crconn(comport):
@@ -109,7 +113,7 @@ def getver(comport): #returns aos version
 ######Telnet part##############
 def texecute(host, outl, act):  # patterns generation & execution. delay in sec, act - On, Off
     print(host,outl,act)
-    tel = telnetlib.Telnet('9.151.140.15{}'.format(host))
+    tel = telnetlib.Telnet(host)
     tel.read_until(b'User Name')
     sendtel(tel,b'apc')
     tel.read_until(b'Password  :')
@@ -139,7 +143,7 @@ def sendtel(tel,tcmd):
 class ApcGui():
     def __init__(self):
         # Configuration parsing - building menu items and testing delay
-        self.comport,self.delay,self.syspatterns=confparse()
+        self.comport,self.delay,self.syspatterns,self.ipaddr=confparse()
         self._root = Tk()
         self.syst=IntVar()  #Radiobutton default value
         self.syst.set(0)    #Radiobutton default value
@@ -207,7 +211,7 @@ class ApcGui():
         for self.toutl in self.pttrnlist:  #outlets iteration
             #sending command to each pdu
             if self.toutl and self.toutl != '0':
-                texecute(4, self.toutl,'On') #need to implement command generation accordingly to a pressed button +update GUI field
+                texecute(self.ipaddr, self.toutl,'On') #need to implement command generation accordingly to a pressed button +update GUI field
         #updating menu entries
 
         for self.but in self._radiobuttons:
@@ -231,7 +235,7 @@ class ApcGui():
         for self.toutl in self.pttrnlist: #outlets iteration
             #sending command to each pdu
             if self.toutl and self.toutl != '0':
-                texecute(4, self.toutl,'Off') #need to implement command generation accordingly to a pressed button +update GUI field
+                texecute(self.ipaddr, self.toutl,'Off') #need to implement command generation accordingly to a pressed button +update GUI field
 
         for self.but in self._radiobuttons:
             self.filteredButtName = re.search(r'(\<.*\>)', self.but["text"])
@@ -265,4 +269,4 @@ class ApcGui():
         self._texbox.delete('1.0', END)
         self._texbox.config(state="disabled")
         self._root.update()
-gui=ApcGui()
+ApcGui()
