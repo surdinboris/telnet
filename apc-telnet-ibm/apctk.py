@@ -169,7 +169,7 @@ class ApcGui():
         self._textboxframe.grid(row=0,padx=5, pady=5, column=1, rowspan=3, sticky=(W,N))
         self._textboxframe.columnconfigure(0, weight=1)
         self._textboxframe.rowconfigure(0, weight=1)
-        self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=35, height=20, state='disabled')
+        self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=35, height=30, state='disabled')
         self._texbox.grid(row=0, column=1, sticky=(W,N))
 
         #testing part
