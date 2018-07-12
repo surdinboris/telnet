@@ -1,5 +1,5 @@
 ('C:\\gitrep\\apc-telnet\\apc-telnet-ibm\\dist\\apctk.exe',
- True,
+ False,
  False,
  False,
  None,
@@ -2919,7 +2919,7 @@
  [],
  False,
  False,
- 1530517207,
- [('run.exe',
-   'C:\\Users\\borisso\\AppData\\Local\\Programs\\Python\\Python36-32\\lib\\site-packages\\PyInstaller\\bootloader\\Windows-32bit\\run.exe',
+ 1531394847,
+ [('runw.exe',
+   'C:\\Users\\borisso\\AppData\\Local\\Programs\\Python\\Python36-32\\lib\\site-packages\\PyInstaller\\bootloader\\Windows-32bit\\runw.exe',
    'EXECUTABLE')])

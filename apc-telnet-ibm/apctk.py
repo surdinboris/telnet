@@ -10,7 +10,7 @@ import re
 from tkinter import messagebox
 # import threading
 # from queue import Queue
-
+ver="1.1"
 import datetime
 from serial.serialutil import SerialException
 ######Config file parsing part##############
@@ -169,12 +169,12 @@ class ApcGui():
         self._textboxframe.grid(row=0,padx=5, pady=5, column=1, rowspan=3, sticky=(W,N))
         self._textboxframe.columnconfigure(0, weight=1)
         self._textboxframe.rowconfigure(0, weight=1)
-        self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=35, height=30, state='disabled')
+        self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=39, height=22, state='disabled')
         self._texbox.grid(row=0, column=1, sticky=(W,N))
 
         #testing part
         self._testingframe=tk.LabelFrame(self._mainframe, text='Testing')
-        self._testingframe.grid(row=1, padx=5, pady=5, column=0,sticky=(W,N))
+        self._testingframe.grid(row=1, padx=5, pady=5, column=0,sticky=W)
         self._testingframe.columnconfigure(0, weight=1)
         self._testingframe.rowconfigure(0, weight=1)
         #radio buttons - system selection
@@ -183,6 +183,7 @@ class ApcGui():
             self._radiobutton = tk.Radiobutton(self._testingframe, text=self.syspattern, variable=self.syst, value=self.ind)
             self._radiobutton.grid(row=self.ind,  padx=1, pady=1, column=0,sticky=(W,N))
             self._radiobuttons.append(self._radiobutton)
+        self.print_to_gui("PDU control tool ver.{}".format(ver))
 
         #user entry
         self._userframe=tk.LabelFrame(self._testingframe, text='Execution')
@@ -204,7 +205,7 @@ class ApcGui():
         # self._startbutton.config(text='Stop testing', command=self.stoptest)
         self.pattrns=(list(self.syspatterns.values())[self.syst.get()]) #get command scenarios for each pdu
         # self.texboxclear()
-        self.print_to_gui('{} {} turned On'.format(datetime.datetime.now().strftime('%H:%M:%S')
+        self.print_to_gui('{} {} turned On'.format(datetime.datetime.now().strftime('%d/%m %H:%M:%S')
                                                         ,list(self.syspatterns)[self.syst.get()]))
         #Generating pattern per PDU for faster operation
         self.pttrnlist = self.pattrns[0].split(',')
