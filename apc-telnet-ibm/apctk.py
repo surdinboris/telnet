@@ -10,7 +10,7 @@ import re
 from tkinter import messagebox
 # import threading
 # from queue import Queue
-ver="1.1"
+ver="1.2b"
 import datetime
 from serial.serialutil import SerialException
 ######Config file parsing part##############
@@ -118,19 +118,19 @@ def texecute(host, outl, act):  # patterns generation & execution. delay in sec,
     sendtel(tel,b'apc')
     tel.read_until(b'Password  :')
     sendtel(tel,b'apc')
-    if type(outl) == str:
-        sendtel(tel, ("ol%s %s" % (act,outl)).encode())
-        if tel.read_until(b'E000:'):
-            print('command passed')
-        else:
-            raise BaseException(ConnectionRefusedError)
+    # if type(outl) == str:
+    #     sendtel(tel, ("ol%s %s" % (act,outl)).encode())
+    #     if tel.read_until(b'E000:'):
+    #         print('command passed')
+    #     else:
+    #         raise BaseException(ConnectionRefusedError)
     if type(outl) == list:
         out=','.join(outl)
         sendtel(tel, ("ol%s %s" % (act, out)).encode())
         if tel.read_until(b'E000:'):
             print('command list passed')
         else:
-            raise BaseException(ConnectionRefusedError)
+            raise BaseException(TypeError)
     sendtel(tel,b'exit')
 
 def sendtel(tel,tcmd):
@@ -209,10 +209,10 @@ class ApcGui():
                                                         ,list(self.syspatterns)[self.syst.get()]))
         #Generating pattern per PDU for faster operation
         self.pttrnlist = self.pattrns[0].split(',')
-        for self.toutl in self.pttrnlist:  #outlets iteration
+        #for self.toutl in self.pttrnlist:  #outlets iteration
             #sending command to each pdu
-            if self.toutl and self.toutl != '0':
-                texecute(self.ipaddr, self.toutl,'On') #need to implement command generation accordingly to a pressed button +update GUI field
+        #    if self.toutl and self.toutl != '0':
+        texecute(self.ipaddr, self.pttrnlist,'On') #need to implement command generation accordingly to a pressed button +update GUI field
         #updating menu entries
 
         for self.but in self._radiobuttons:
@@ -232,12 +232,12 @@ class ApcGui():
         self.print_to_gui('{} {} turn Off'.format(datetime.datetime.now().strftime('%H:%M:%S')
                                                         ,list(self.syspatterns)[self.syst.get()]))
         #Generating pattern per PDU for faster operation
-        self.pttrnlist=self.pattrns[0].split(',')
-        for self.toutl in self.pttrnlist: #outlets iteration
+        self.pttrnlist = self.pattrns[0].split(',')
+        #for self.toutl in self.pttrnlist:  #outlets iteration
             #sending command to each pdu
-            if self.toutl and self.toutl != '0':
-                texecute(self.ipaddr, self.toutl,'Off') #need to implement command generation accordingly to a pressed button +update GUI field
-
+        #    if self.toutl and self.toutl != '0':
+        texecute(self.ipaddr, self.pttrnlist,'Off') #need to implement command generation accordingly to a pressed button +update GUI field
+        #updating menu entries
         for self.but in self._radiobuttons:
             self.filteredButtName = re.search(r'(\<.*\>)', self.but["text"])
             if self.filteredButtName.group(0) == list(self.syspatterns)[self.syst.get()]:
