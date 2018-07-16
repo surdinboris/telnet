@@ -130,7 +130,7 @@ def texecute(host, outl, act):  # patterns generation & execution. delay in sec,
         if tel.read_until(b'E000:'):
             print('command list passed')
         else:
-            raise BaseException(TypeError)
+            raise BaseException(ConnectionError)
     sendtel(tel,b'exit')
 
 def sendtel(tel,tcmd):
@@ -169,7 +169,7 @@ class ApcGui():
         self._textboxframe.grid(row=0,padx=5, pady=5, column=1, rowspan=3, sticky=(W,N))
         self._textboxframe.columnconfigure(0, weight=1)
         self._textboxframe.rowconfigure(0, weight=1)
-        self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=40, height=26, state='disabled')
+        self._texbox = tkst.ScrolledText(self._textboxframe,wrap='word', width=40, height=30, state='disabled')
         self._texbox.grid(row=0, column=1, sticky=(W,N))
 
         #testing part
@@ -229,7 +229,7 @@ class ApcGui():
         # self._startbutton.config(text='Stop testing', command=self.stoptest)
         self.pattrns=(list(self.syspatterns.values())[self.syst.get()]) #get command scenarios for each pdu
         # self.texboxclear()
-        self.print_to_gui('{} {} turn Off'.format(datetime.datetime.now().strftime('%H:%M:%S')
+        self.print_to_gui('{} {} turn Off'.format(datetime.datetime.now().strftime('%d/%m %H:%M:%S')
                                                         ,list(self.syspatterns)[self.syst.get()]))
         #Generating pattern per PDU for faster operation
         self.pttrnlist = self.pattrns[0].split(',')
